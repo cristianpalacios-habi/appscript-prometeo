@@ -102,7 +102,13 @@ Ve a [script.google.com](https://script.google.com) y crea un nuevo proyecto (o 
 
 ### 3. Configurar environments.json
 
-Reemplaza los placeholders con tus Script IDs reales:
+Copia el archivo de ejemplo y rellena tus Script IDs reales:
+
+```bash
+cp environments.example.json environments.json
+```
+
+Luego edita `environments.json`:
 
 ```json
 {
@@ -116,6 +122,7 @@ Reemplaza los placeholders con tus Script IDs reales:
 ```
 
 > Si solo necesitas un ambiente, puedes poner el mismo ID en ambos.
+> `environments.json` esta en `.gitignore` para que tus IDs reales nunca se suban al repo.
 
 ### 4. Configurar los scopes OAuth
 
@@ -161,7 +168,8 @@ Scopes comunes:
 ├── .claspignore         # Archivos que clasp NO sube
 ├── .gitignore           # Archivos ignorados por git
 ├── appsscript.json      # Manifiesto de Apps Script (scopes, runtime)
-├── environments.json    # Script IDs por ambiente (dev/prod)
+├── environments.example.json  # Plantilla de Script IDs (se commitea)
+├── environments.json          # Script IDs reales (en .gitignore)
 ├── package.json         # Scripts npm
 ├── Main.js              # Punto de entrada (tu codigo va aqui)
 ├── scripts/

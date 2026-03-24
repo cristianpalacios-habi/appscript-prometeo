@@ -3,6 +3,7 @@ node_modules/**
 package.json
 package-lock.json
 environments.json
+environments.example.json
 .gitignore
 .git/**
 README.md
