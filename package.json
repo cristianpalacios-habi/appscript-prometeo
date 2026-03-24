@@ -1,0 +1,11 @@
+{
+  "name": "appscript-starter",
+  "private": true,
+  "scripts": {
+    "push:dev": "node scripts/push.js dev",
+    "push:prod": "node scripts/push.js prod",
+    "pull": "clasp pull",
+    "open": "clasp open",
+    "logs": "clasp logs"
+  }
+}

@@ -1,0 +1,8 @@
+scripts/**
+node_modules/**
+package.json
+package-lock.json
+environments.json
+.gitignore
+.git/**
+README.md

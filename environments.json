@@ -1,0 +1,8 @@
+{
+  "dev": {
+    "scriptId": "PEGA_AQUI_TU_SCRIPT_ID_DEV"
+  },
+  "prod": {
+    "scriptId": "PEGA_AQUI_TU_SCRIPT_ID_PROD"
+  }
+}
