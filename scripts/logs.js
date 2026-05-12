@@ -13,16 +13,13 @@ assertEnv(env);
 const envConfig = loadEnvironments();
 const scriptId = assertScriptId(envConfig, env);
 
-console.log(`-> Ambiente: ${env.toUpperCase()}`);
-console.log(`-> Script ID: ${scriptId.slice(0, 15)}...`);
-console.log("");
+console.log(`Logs de ${env.toUpperCase()}:\n`);
 
 withClaspScriptId(scriptId, () => {
   try {
-    execSync("clasp push --force", { cwd: ROOT, stdio: "inherit" });
-    console.log(`\nPush a ${env.toUpperCase()} completado.`);
+    execSync("clasp logs", { cwd: ROOT, stdio: "inherit" });
   } catch (err) {
-    console.error(`\nError en push a ${env.toUpperCase()}.`);
+    console.error("Error al obtener logs.");
     process.exit(1);
   }
 });
