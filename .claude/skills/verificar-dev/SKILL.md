@@ -16,14 +16,14 @@ Ejecuta la fase de **verificacion** del loop. **No commitea ni promueve** — so
 
 ```
 A. Revision estatica   →   B. Autoverificacion   →   C. Fix loop si falla
-       (codigo)              (browser de Cursor)        (plan + ejecutar + push:dev)
+       (codigo)              (browser de Cursor)        (plan + ejecutar + deploy:dev)
                                                                   │
                                                                   ▼
                                                           D. Checklist guiado
                                                               al usuario
                                                                   │
                                                           E. Marcar verificado
-                                                              (deploy:dev)
+                                                              (deploy:dev "VALIDADO")
 ```
 
 ## Pre-checks (aborta si falla)
@@ -187,11 +187,13 @@ Aplica los cambios. Misma logica que `/ejecutar-milestone`:
 - `node --check` por archivo modificado.
 - Sin commits, sin push a GitHub.
 
-### C.3 Subir a Apps Script DEV
+### C.3 Subir a Apps Script DEV (mismo deployment)
 
 ```bash
-npm run push:dev
+npm run deploy:dev -- --desc "<milestone> - <objetivo> (fix verificacion)"
 ```
+
+Reutiliza el mismo `deploymentId` que se uso en `/ejecutar-milestone`. El URL del deployment de DEV no cambia — el humano refresca su pestana y ve el codigo actualizado.
 
 ### C.4 Documentar el fix en el plan
 
@@ -256,19 +258,19 @@ Pasa a Fase E.
 
 ## Fase E — Marcar como verificado
 
-### E.1 Crear deployment versionado en DEV
+### E.1 Actualizar el deployment de DEV con descripcion "VALIDADO"
 
-Hasta ahora todos los pushes a DEV han sido sin deployment (push raw). Ahora que esta validado, crea un deployment versionado para marcar el checkpoint:
+A lo largo de `/ejecutar-milestone` y de los fixes de Fase C, el `deploymentId` de DEV se ha venido actualizando (mismo ID, codigo nuevo). Ahora que el milestone esta validado, hacemos un ultimo `deploy:dev` para que la descripcion en la consola de Apps Script refleje el estado "VALIDADO":
 
-Construye descripcion sugerida del deployment:
+Construye descripcion sugerida:
 
 ```
-<milestone> - <objetivo del plan, max 60 char> - <YYYY-MM-DD HH:MM>
+<milestone> - VALIDADO - <objetivo del plan, max 60 char>
 ```
 
-Pregunta al usuario:
+Pregunta:
 
-> Voy a crear el deployment versionado en DEV con esta descripcion:
+> Voy a actualizar la descripcion del deployment de DEV para marcarlo como validado:
 > > `<descripcion sugerida>`
 >
 > ¿La uso?
@@ -279,7 +281,7 @@ Ejecuta:
 npm run deploy:dev -- --desc "<descripcion final>"
 ```
 
-Esto actualiza `environments.json` con el nuevo `dev.deploymentId`.
+**El `deploymentId` y URL no cambian** — sigue siendo el mismo deployment estable de DEV. Lo unico que cambia en `environments.json` son `deploymentDescription` y `deployedAt`.
 
 ### E.2 Sincronizar docs/IDS.md
 
@@ -323,7 +325,7 @@ Lee `environments.json` y reescribe `docs/IDS.md` (gitignored) con la tabla de I
 - **No commitees**. Esto es responsabilidad de `/promover-prod`.
 - **No hagas `git push` a GitHub.** Tambien de `/promover-prod`.
 - **No despliegues a PROD ni corras `npm run promote`.** Esta skill solo toca DEV.
-- No edites codigo en el editor web. Si el usuario reporta que edito ahi, reorientalo: el cambio se hace en local y vuelve a `npm run push:dev`.
+- No edites codigo en el editor web. Si el usuario reporta que edito ahi, reorientalo: el cambio se hace en local y vuelve a `npm run deploy:dev`.
 - No marques `status: "verified"` si algun item del checklist no paso.
 - No saltes Fase D — la validacion final con el usuario es obligatoria. Tu autoverificacion (B) es complemento, no reemplazo.
 - No instales triggers automaticamente. `installTriggers()` se ejecuta manualmente.

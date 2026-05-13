@@ -46,8 +46,8 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 | `/config-entorno` | 1 vez por computador | Instala Node 20 LTS, nvm, clasp, configura git |
 | `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
 | `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
-| `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run push:dev` (sin commit — cambios visibles en Source Control) |
-| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, deploy:dev |
+| `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run deploy:dev` (sube y actualiza el deployment estable de DEV — sin commit; cambios visibles en Source Control) |
+| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, marca el deployment de DEV como VALIDADO |
 | `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
 | `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
 | `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
@@ -112,7 +112,7 @@ Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PR
 **Flujo de cambios**:
 
 ```
-edicion local → npm run push:dev → Apps Script DEV → /promover-prod →
+edicion local → npm run deploy:dev → Apps Script DEV (mismo deploymentId siempre) → /promover-prod →
   → 1 commit local → push a rama dev en GitHub → push a rama main en GitHub → npm run promote → Apps Script PROD
 ```
 
@@ -126,9 +126,9 @@ Ver detalle en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
 | Comando | Que hace |
 | --- | --- |
-| `npm run push:dev` | Sube codigo a DEV (sin crear deployment) |
+| `npm run push:dev` | Sube codigo a DEV sin tocar el deployment (uso raro — preferir `deploy:dev`) |
 | `npm run push:prod` | Sube codigo a PROD (sin crear deployment, raro) |
-| `npm run deploy:dev` | Push + crea deployment en DEV, guarda `deploymentId` |
+| `npm run deploy:dev` | Push + actualiza el deployment estable de DEV (mismo `deploymentId` siempre; el primer deploy crea el ID y lo guarda en `environments.json`) |
 | `npm run deploy:prod` | Push + crea deployment en PROD |
 | `npm run promote` | Push + deployment en PROD (promocion estandar desde DEV validado) |
 | `npm run open:dev` | Abre DEV en el navegador (solo para logs/ejecutar) |

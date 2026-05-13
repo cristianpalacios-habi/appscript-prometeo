@@ -115,10 +115,10 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 | Setup inicial | `/config-entorno` | Instala Node, nvm, clasp (1 vez por computador) |
 | Setup inicial | `/config-appsscript` | Crea proyectos DEV/PROD; crea rama `dev` en GitHub |
 | Planear milestone | `/plan-milestone` | Escribe plan + state.json (**sin commit**) |
-| Ejecutar plan | `/ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run push:dev` |
-| Validar en dev | `/verificar-dev` | Itera fixes (**sin commit**) + `push:dev`; al final `deploy:dev` |
+| Ejecutar plan | `/ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run deploy:dev` (reutiliza mismo `deploymentId`) |
+| Validar en dev | `/verificar-dev` | Itera fixes (**sin commit**) + `deploy:dev` mismo ID; al cerrar `deploy:dev` marca "VALIDADO" |
 | Promover a prod | `/promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
-| Diagnostico | `/debug-error` | Fix en local (sin commit) + `push:dev` |
+| Diagnostico | `/debug-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
 | Cerrar milestone | `/nuevo-milestone` | Cierra activo + arranca siguiente |
 
 **Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.
@@ -133,8 +133,8 @@ Si el usuario describe una intencion que matchea con una skill, **invoca la skil
 
 ## Comandos del repo (referencia)
 
-- `npm run push:dev` — sube codigo a dev (sin crear deployment)
-- `npm run deploy:dev` — push + crea/actualiza deployment en dev
+- `npm run push:dev` — sube codigo a dev sin tocar el deployment (uso raro, preferir `deploy:dev`)
+- `npm run deploy:dev` — push + actualiza el deployment estable de dev (mismo `deploymentId` siempre; el primero se crea en `/config-appsscript`)
 - `npm run promote` — promueve dev validado a prod (push + deploy en prod)
 - `npm run open:dev` / `open:prod` — abre el editor en el ambiente correcto
 - `npm run logs:dev` / `logs:prod` — muestra logs del ambiente

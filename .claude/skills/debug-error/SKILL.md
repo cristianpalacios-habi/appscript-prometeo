@@ -101,11 +101,13 @@ Una vez confirmada la causa raiz:
 
 1. Edita el archivo local con el fix. **No commitees** — los cambios se quedan sin commitear (igual que en `/ejecutar-milestone` y `/verificar-dev`); todo se commitea junto en `/promover-prod`.
 2. Valida sintaxis: `node --check <archivo>`.
-3. Re-sube a DEV (push raw, sin deployment):
+3. Re-sube a DEV reutilizando el mismo deployment:
 
    ```bash
-   npm run push:dev
+   npm run deploy:dev -- --desc "<milestone> - <objetivo> (fix debug)"
    ```
+
+   Esto actualiza el deployment estable de DEV (mismo `deploymentId`, mismo URL) con el codigo del fix. El humano refresca su pestana de DEV y ve el codigo nuevo.
 
 4. Pide al usuario re-ejecutar la funcion en el editor de DEV y confirmar.
 5. Si pasa: dirige al usuario a retomar `/verificar-dev` para continuar el checklist. El fix queda como un cambio mas en el working directory; sera parte del commit unico que hace `/promover-prod`.
@@ -133,7 +135,7 @@ Crea entrada temporal en state.json:
 }
 ```
 
-Sigue el flujo: push:dev → re-ejecutar en DEV → fix iterativo → commit → instruir al usuario a correr `/verificar-dev` y luego `/promover-prod`.
+Sigue el flujo: `deploy:dev` (mismo deploymentId) → re-ejecutar en DEV → fix iterativo → commit → instruir al usuario a correr `/verificar-dev` y luego `/promover-prod`.
 
 ### 5. Documentar
 

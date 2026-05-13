@@ -54,7 +54,7 @@ Si falla → "DEV no esta configurado. Corre `/config-appsscript`."
 > - **No commiteo nada** — los cambios quedan visibles en el panel Source Control de Cursor.
 > - **Solo pauso si encuentro una desviacion** del plan (scope OAuth nuevo, propiedad nueva, archivo extra no contemplado, trigger distinto).
 > - Detalles internos (helpers, naming, formato) los resuelvo sin pausar.
-> - Al terminar, **subo el codigo a Apps Script DEV** con `npm run push:dev`.
+> - Al terminar, **subo el codigo a Apps Script DEV** con `npm run deploy:dev` (push + actualiza el deployment de DEV reutilizando el mismo ID — el URL del proyecto en DEV no cambia entre milestones).
 > - El commit se hace despues, en `/promover-prod`, con todos los cambios del milestone juntos.
 >
 > ¿Procedo?
@@ -144,13 +144,30 @@ Si aprueba, **actualiza `docs/milestones/<milestone>-plan.md`** con el cambio y 
 
 No pauses por: naming de variables, estructura interna de funciones, helpers privados, comentarios.
 
-### 6. Subir codigo a Apps Script DEV
+### 6. Subir codigo y actualizar deployment de DEV
 
-```bash
-npm run push:dev
+Construye una descripcion estable para el deployment del milestone. Sugiero:
+
+```
+<milestone> - <objetivo del plan, max 60 char>
 ```
 
-Esto sube el codigo al proyecto DEV sin crear deployment (la version "viva" del editor refleja el codigo recien escrito).
+Ejemplo: `M1 - Procesar tickets pendientes y mandar reporte diario`
+
+No incluyas timestamp — la descripcion se mantiene durante todo el milestone, lo que cambia es el codigo subido.
+
+Ejecuta:
+
+```bash
+npm run deploy:dev -- --desc "<milestone> - <objetivo>"
+```
+
+Esto:
+1. Sube el codigo al proyecto DEV (`clasp push --force`).
+2. **Reutiliza el `deploymentId` existente** que esta en `environments.json` (creado en `/config-appsscript`), actualizando solo el codigo y la descripcion. **El URL del deployment NO cambia** — el humano puede tener abierta la pestana de DEV y solo refrescar para ver el codigo nuevo.
+3. Guarda la fecha del ultimo deploy en `environments.json` (`deployedAt`).
+
+Verifica el output: debe decir `Deployment ID (reutilizado): <id>`. Si dice "Creando deployment nuevo", es que el deploymentId no estaba registrado — eso pasaria si `/config-appsscript` se salto el primer deploy. En ese caso, el nuevo ID se guarda automaticamente y futuras corridas lo reutilizaran.
 
 Si falla:
 - **Apps Script API not enabled** → guia al usuario a `script.google.com/home/usersettings` para habilitarla.
@@ -174,7 +191,7 @@ Resumen:
 > - `docs/milestones/<milestone>-plan.md` (si hubo desviacion aprobada)
 > - `.planning/state.json`
 >
-> **Codigo subido a Apps Script DEV** ✓
+> **Codigo subido a Apps Script DEV** ✓ (deployment de DEV actualizado, mismo URL de siempre)
 >
 > Puedes revisar todos los cambios en el panel **Source Control** de Cursor (icono de rama en la barra lateral). **No hay commit aun** — el commit se hace en `/promover-prod` con todo el milestone junto.
 
@@ -207,7 +224,8 @@ Si hay propiedades pendientes, **lista las claves** que el usuario debe configur
 
 ## Errores comunes y como manejarlos
 
-- **`npm run push:dev` falla con "Apps Script API not enabled"** → guia a `script.google.com/home/usersettings`.
+- **`npm run deploy:dev` falla con "Apps Script API not enabled"** → guia a `script.google.com/home/usersettings`.
+- **`npm run deploy:dev` falla con "deployment not found"** → el `deploymentId` guardado en `environments.json` ya no existe en Apps Script (puede pasar si el usuario borro el deployment manualmente). Borra el campo `deploymentId` de `environments.json` para el ambiente afectado y vuelve a correr — creara uno nuevo.
 - **`node --check` falla** → corrige sintaxis antes de seguir.
 - **Plan ambiguo o vacio** → no inventes. Pausa y dile al usuario: "el plan no detalla X. ¿Cual es la decision?". Si es importante, actualiza el plan antes de seguir.
 - **`git status` muestra archivos rastreados que deberian ser gitignored** (`environments.json`, `docs/IDS.md`, `node_modules/`) → alerta al usuario, hay un fallo en `.gitignore`.
@@ -216,8 +234,8 @@ Si hay propiedades pendientes, **lista las claves** que el usuario debe configur
 
 - **No commitees.** Ningun `git commit`, ni `git add` (excepto si necesitas inspeccionar `git status`). El commit es responsabilidad de `/promover-prod`.
 - **No hagas `git push` a GitHub.** Eso tambien es de `/promover-prod`.
-- No corras `npm run deploy:dev`, `deploy:prod`, `promote` ni `clasp deploy`. Eso es de `/verificar-dev` (final) y `/promover-prod`.
+- No corras `deploy:prod` ni `promote` aqui — eso es de `/promover-prod`.
 - No abras el editor de Apps Script en esta skill — salvo recordarle al usuario que configure Script Properties al final.
 - No agregues "mejoras" fuera del plan (refactors, logging extra, manejo de errores para casos no previstos). Si crees que vale la pena, registralo como sugerencia en el cierre, no en el codigo.
 - No saltes `node --check`. Es la unica validacion local antes del push a DEV.
-- No marques `status: "executed"` si hubo errores no resueltos o si `npm run push:dev` fallo.
+- No marques `status: "executed"` si hubo errores no resueltos o si `npm run deploy:dev` fallo.

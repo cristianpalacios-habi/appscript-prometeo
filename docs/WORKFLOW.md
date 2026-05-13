@@ -29,8 +29,8 @@ Tu PRD parte el proyecto en milestones entregables. **Cada milestone pasa por el
 | Skill | Git local | GitHub | Apps Script |
 | --- | --- | --- | --- |
 | `/plan-milestone` | escribe plan + state.json (sin commit) | — | — |
-| `/ejecutar-milestone` | escribe codigo (sin commit) | — | `npm run push:dev` |
-| `/verificar-dev` | fixes (sin commit) | — | `push:dev` por fix; `deploy:dev` al cierre |
+| `/ejecutar-milestone` | escribe codigo (sin commit) | — | `npm run deploy:dev` (reutiliza mismo `deploymentId`) |
+| `/verificar-dev` | fixes (sin commit) | — | `deploy:dev` por fix (mismo `deploymentId`); al cerrar, `deploy:dev` con descripcion VALIDADO |
 | `/promover-prod` | **1 commit** `feat(<M>): <obj>` | push a `dev` luego a `main` | `npm run promote` (PROD) |
 
 **No se commitea hasta `/promover-prod`.** Durante todo el milestone los cambios viven sin commitear en el working directory. El usuario los revisa cuando quiera en el panel **Source Control** de Cursor.
@@ -46,7 +46,7 @@ Tu PRD parte el proyecto en milestones entregables. **Cada milestone pasa por el
    │  Cursor + Git   │
    └────────┬────────┘
             │
-            │  npm run push:dev / deploy:dev   (durante el milestone)
+            │  npm run deploy:dev   (durante el milestone, mismo deploymentId)
             ▼
    ┌─────────────────┐
    │   Apps Script   │
@@ -89,7 +89,7 @@ Tu PRD parte el proyecto en milestones entregables. **Cada milestone pasa por el
 ### 2. Ejecutar — `/ejecutar-milestone`
 
 - Modo Cursor: **Agent Mode**.
-- Que pasa: el asistente implementa el plan en archivos separados por responsabilidad, valida sintaxis (`node --check`), y al final sube el codigo a Apps Script DEV con `npm run push:dev`.
+- Que pasa: el asistente implementa el plan en archivos separados por responsabilidad, valida sintaxis (`node --check`), y al final sube el codigo a Apps Script DEV con `npm run deploy:dev` (reutiliza el `deploymentId` estable de DEV — el URL del proyecto en DEV no cambia entre milestones).
 - Solo pausa si encuentra una **desviacion** del plan (scope OAuth nuevo, propiedad nueva, archivo no contemplado, trigger distinto).
 - **No commitea.** Cambios visibles en Source Control de Cursor.
 
@@ -99,9 +99,9 @@ Tu PRD parte el proyecto en milestones entregables. **Cada milestone pasa por el
 
 - **A. Revision estatica** — el asistente lee el diff y lo contrasta contra CLAUDE.md, el plan, el PRD y buenas practicas de Apps Script.
 - **B. Autoverificacion** — el asistente abre el editor de DEV (y URLs relevantes: Sheets, Web App) en el **browser integrado de Cursor**, ejecuta la funcion principal, lee logs, inspecciona outputs.
-- **C. Fix loop** — si A o B detectan problemas, propone fix, lo implementa, hace `npm run push:dev` y reinicia.
+- **C. Fix loop** — si A o B detectan problemas, propone fix, lo implementa, hace `npm run deploy:dev` (mismo `deploymentId`) y reinicia.
 - **D. Checklist guiado al usuario** — recorre contigo cada item del checklist del plan. Si algo falla, vuelve a C.
-- **E. Marcar verificado** — `npm run deploy:dev` (crea deployment versionado en DEV), sincroniza `docs/IDS.md`, marca state como `verified`.
+- **E. Marcar verificado** — `npm run deploy:dev` con descripcion "VALIDADO" (mismo `deploymentId` de siempre, solo actualiza metadata), sincroniza `docs/IDS.md`, marca state como `verified`.
 
 **Sigue sin commitear.** Cuando termina, los cambios siguen visibles en Source Control.
 
@@ -124,8 +124,8 @@ Orden estricto:
 
 | Comando | Que hace |
 | --- | --- |
-| `npm run push:dev` | Sube codigo a DEV sin crear deployment (usado durante ejecutar y verificar) |
-| `npm run deploy:dev` | Push + crea deployment versionado en DEV (al cierre de verificar) |
+| `npm run push:dev` | Sube codigo a DEV sin tocar el deployment (uso raro, preferir `deploy:dev`) |
+| `npm run deploy:dev` | Push + actualiza el deployment estable de DEV (reutiliza el mismo `deploymentId`; el primero se crea en `/config-appsscript`). Usado durante ejecutar, verificar y debug |
 | `npm run push:prod` | Sube codigo a PROD sin crear deployment (raro — uso interno) |
 | `npm run promote` | Push + deployment versionado en PROD (usado solo por /promover-prod) |
 | `npm run open:dev` | Abre DEV en el navegador |
