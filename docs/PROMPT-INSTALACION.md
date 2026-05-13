@@ -14,17 +14,21 @@ Despues de esto, el usuario corre `/config-entorno` y `/config-appsscript` (las 
 
 ---
 
-## Para el mantenedor de la plantilla — REEMPLAZAR antes de publicar
+## Valores configurados
 
-El prompt usa estos placeholders. **Antes de compartir el prompt con un usuario, reemplaza los valores con los reales de tu organizacion:**
+El prompt ya esta listo para copy-paste: trae los valores reales de Habi embebidos. Si alguno cambia (cambio de org, repo plantilla mudado, canal de soporte distinto), actualizalo en TODO el prompt y refresca la tabla de abajo.
 
-| Placeholder | Donde | Que poner |
+| Variable | Valor actual | Donde aparece en el prompt |
 | --- | --- | --- |
-| `<<<ORG_GITHUB>>>` | En "el usuario tiene acceso a la org..." y en `gh repo create` | Nombre real de la org de GitHub (ej: `habi-co` o `Habi`) |
-| `<<<TEMPLATE_REPO>>>` | En el comando `gh repo create --template` | Ruta completa del repo plantilla (ej: `habi-co/prometeo-appscript-template`) |
-| `<<<CANAL_AYUDA>>>` | En el cierre | URL del canal de soporte (G-chat: `https://chat.google.com/room/AAQAvHQfwAI?cls=7`) |
+| Org de GitHub | `HabiGlobal` | seccion `CONTEXTO IMPORTANTE`, comando `gh repo create`, verificacion de membership con `gh api orgs/HabiGlobal/members/...`, mensajes de error sobre SSO |
+| Repo plantilla | `cristianpalacios-habi/appscript-prometeo` | flag `--template` del comando `gh repo create` |
+| Canal de soporte | `https://chat.google.com/room/AAQAvHQfwAI?cls=7` | reglas generales, mensajes de error, paso de cierre |
 
-Verifica que las rutas existan y que cualquier usuario con SSO de Habi pueda crear repos en la org.
+**Antes de publicar cambios al prompt, verifica:**
+
+- Que cualquier usuario con SSO de Habi pueda crear repos en `HabiGlobal` (chequeo rapido: `gh api orgs/HabiGlobal/members/<tu-usuario>` debe retornar 204).
+- Que `cristianpalacios-habi/appscript-prometeo` siga marcado como **Template repository** en su Settings de GitHub.
+- Que el canal de G-chat siga activo y el enlace funcione abriendolo en una pestana nueva.
 
 ---
 
@@ -52,15 +56,15 @@ CONTEXTO IMPORTANTE
 - El usuario NO es tecnico. Habla siempre en espanol claro. Explica cada paso en una frase antes de ejecutarlo.
 - El usuario ya tiene Cursor instalado y autenticado con SSO de Habi.
 - Tiene permisos de administrador en su computador.
-- Tiene acceso a la org "<<<ORG_GITHUB>>>" en GitHub via SSO.
-- El repositorio plantilla del proyecto es "<<<TEMPLATE_REPO>>>".
+- Tiene acceso a la org "HabiGlobal" en GitHub via SSO.
+- El repositorio plantilla del proyecto es "cristianpalacios-habi/appscript-prometeo".
 
 REGLAS GENERALES (CRITICAS)
 - Anuncia el plan completo al inicio y pide UNA confirmacion. No pidas confirmacion por cada subpaso de instalacion.
 - Reporta el progreso despues de cada PASO (no de cada comando).
 - Si un comando falla, captura el error completo, explicalo en espanol simple, y propon el siguiente paso. NO reintentes lo mismo dos veces sin avisar.
 - Antes de instalar algo, verifica si ya esta instalado. Si lo esta, salta a verificar la version y continua. Esta skill debe ser idempotente.
-- Si encuentras una situacion no contemplada aqui, detente y pide al usuario que pregunte en el canal de soporte: <<<CANAL_AYUDA>>>.
+- Si encuentras una situacion no contemplada aqui, detente y pide al usuario que pregunte en el canal de soporte: https://chat.google.com/room/AAQAvHQfwAI?cls=7.
 - NO uses sudo silenciosamente. Si un paso requiere sudo, AVISA al usuario antes y pidele que este atento a poner su contrasena en la terminal.
 
 PLAN QUE ANUNCIAS AL USUARIO AL INICIO
@@ -266,14 +270,14 @@ Verifica:
 
 Confirma que el usuario tiene acceso a la org:
 
-  gh api orgs/<<<ORG_GITHUB>>>/members/$(gh api user --jq .login) -i 2>&1 | head -1
+  gh api orgs/HabiGlobal/members/$(gh api user --jq .login) -i 2>&1 | head -1
 
 - Si retorna 204: OK, es miembro.
 - Si retorna 404: el usuario NO es miembro de la org, o su autorizacion SSO no esta activa. Avisa:
 
-> Tu cuenta de GitHub no esta detectada como miembro de <<<ORG_GITHUB>>>. Posibles causas:
+> Tu cuenta de GitHub no esta detectada como miembro de HabiGlobal. Posibles causas:
 > 1. No tienes acceso a la org (pide acceso en el canal de soporte).
-> 2. Tienes acceso pero no autorizaste SSO en este token. Ve a https://github.com/settings/tokens, encuentra el token de gh CLI, y autoriza SSO para <<<ORG_GITHUB>>>.
+> 2. Tienes acceso pero no autorizaste SSO en este token. Ve a https://github.com/settings/tokens, encuentra el token de gh CLI, y autoriza SSO para HabiGlobal.
 
 Bloquea aqui hasta resolver.
 
@@ -293,14 +297,14 @@ Valida el nombre que te de:
 Crea el repo:
 
   cd ~ || cd
-  gh repo create <<<ORG_GITHUB>>>/<nombre-elegido> --template <<<TEMPLATE_REPO>>> --private --clone
+  gh repo create HabiGlobal/<nombre-elegido> --template cristianpalacios-habi/appscript-prometeo --private --clone
 
 Esto crea el repo en la org y lo clona en el directorio actual.
 
 Si falla:
 - Permission denied / 403 → el usuario no tiene permisos para crear repos en la org. Avisa al usuario que pida acceso.
 - Repo ya existe → ofrece otro nombre.
-- Template not found → revisa el placeholder <<<TEMPLATE_REPO>>>. Esto indica un error de configuracion de la plantilla, no del usuario.
+- Template not found → revisa el placeholder cristianpalacios-habi/appscript-prometeo. Esto indica un error de configuracion de la plantilla, no del usuario.
 
 Verifica:
 
@@ -372,8 +376,8 @@ Resume al usuario:
 >
 > ✓ Sistema operativo: <SO>
 > ✓ Git: configurado como <nombre> <email>
-> ✓ GitHub CLI: autenticado y con acceso a <<<ORG_GITHUB>>>
-> ✓ Repositorio: <<<ORG_GITHUB>>>/<nombre-elegido> creado y abierto en Cursor
+> ✓ GitHub CLI: autenticado y con acceso a HabiGlobal
+> ✓ Repositorio: HabiGlobal/<nombre-elegido> creado y abierto en Cursor
 > ✓ API de Apps Script: habilitada en tu cuenta de Google
 >
 > Siguientes pasos (las haces tu, ahora desde Cursor):
@@ -382,7 +386,7 @@ Resume al usuario:
 > 3. Copia tu PRD aprobado al archivo docs/PRD.md.
 > 4. Corre /plan-milestone para arrancar M1.
 >
-> Si algo falla, pregunta en el canal de soporte: <<<CANAL_AYUDA>>>.
+> Si algo falla, pregunta en el canal de soporte: https://chat.google.com/room/AAQAvHQfwAI?cls=7.
 
 FIN.
 ```
