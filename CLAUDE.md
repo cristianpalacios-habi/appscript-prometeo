@@ -76,16 +76,24 @@ Si durante la ejecucion cambia algo del PRD (alcance, decisiones, milestones), a
 
 El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el momento correcto en lugar de improvisar:
 
-| Momento | Skill | Cuando |
+| Momento | Skill | Que hace con git / GitHub / Apps Script |
 | --- | --- | --- |
-| Setup inicial | `/config-entorno` | Una vez por computador (Node, nvm, clasp) |
-| Setup inicial | `/config-appsscript` | Crear proyectos dev/prod, llenar IDs |
-| Planear milestone | `/plan-milestone` | Antes de escribir codigo de un milestone |
-| Ejecutar plan | `/ejecutar-milestone` | Despues de aprobar plan |
-| Validar en dev | `/verificar-dev` | Despues de implementar, antes de prod |
-| Promover a prod | `/promover-prod` | Cuando dev esta validado |
-| Diagnostico | `/debug-error` | Cuando algo falla |
-| Cerrar milestone | `/nuevo-milestone` | Al cerrar uno, antes de planear el siguiente |
+| Setup inicial | `/config-entorno` | Instala Node, nvm, clasp (1 vez por computador) |
+| Setup inicial | `/config-appsscript` | Crea proyectos DEV/PROD; crea rama `dev` en GitHub |
+| Planear milestone | `/plan-milestone` | Escribe plan + state.json (**sin commit**) |
+| Ejecutar plan | `/ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run push:dev` |
+| Validar en dev | `/verificar-dev` | Itera fixes (**sin commit**) + `push:dev`; al final `deploy:dev` |
+| Promover a prod | `/promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
+| Diagnostico | `/debug-error` | Fix en local (sin commit) + `push:dev` |
+| Cerrar milestone | `/nuevo-milestone` | Cierra activo + arranca siguiente |
+
+**Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.
+
+**Ramas en GitHub**:
+
+- `main` — codigo actualmente en Apps Script PROD.
+- `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
+- Trabajo local va sobre `main`. `/promover-prod` empuja a `dev` y luego a `main` en GitHub.
 
 Si el usuario describe una intencion que matchea con una skill, **invoca la skill** en vez de improvisar. Las skills aseguran consistencia entre proyectos Prometeo.
 

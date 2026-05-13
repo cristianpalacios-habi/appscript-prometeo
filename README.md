@@ -44,12 +44,12 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 | Skill | Cuando | Que hace |
 | --- | --- | --- |
 | `/config-entorno` | 1 vez por computador | Instala Node 20 LTS, nvm, clasp, configura git |
-| `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script, llena IDs, smoke test |
-| `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` |
-| `/ejecutar-milestone` | Por milestone | Implementa el plan en archivos por responsabilidad, hace commit |
-| `/verificar-dev` | Por milestone | Despliega a DEV, valida checklist, sincroniza `docs/IDS.md` |
-| `/promover-prod` | Por milestone | Despliega a PROD, smoke test, tag git, cierra milestone |
-| `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local |
+| `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
+| `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
+| `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run push:dev` (sin commit — cambios visibles en Source Control) |
+| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, deploy:dev |
+| `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
+| `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
 | `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
 
 Todas las skills viven en `.claude/skills/` y se invocan con `/<nombre>` en el chat de Cursor (Agent Mode).
@@ -96,15 +96,27 @@ Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PR
 
 ---
 
-## Ambientes
+## Ambientes y ramas
 
-Tres lugares donde vive tu codigo:
+**Apps Script** (donde corre el codigo):
 
-- **Local** (tu computador) — donde editas con Cursor. Tambien respaldado en GitHub.
+- **Local** (tu computador) — donde editas con Cursor.
 - **DEV** (Apps Script) — donde el codigo corre por primera vez. Aislado de operacion real.
 - **PROD** (Apps Script) — operacion real, con consecuencias reales.
 
-**Toda edicion nace en local y fluye `local → DEV → PROD`.** Nunca se edita en el editor web.
+**GitHub** (donde se guarda el historial):
+
+- Rama `main` — codigo actualmente en Apps Script PROD.
+- Rama `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
+
+**Flujo de cambios**:
+
+```
+edicion local → npm run push:dev → Apps Script DEV → /promover-prod →
+  → 1 commit local → push a rama dev en GitHub → push a rama main en GitHub → npm run promote → Apps Script PROD
+```
+
+**Toda edicion nace en local. No se edita en el editor web de Apps Script.** Durante el milestone los cambios NO se commitean — se acumulan visibles en el panel Source Control de Cursor para que los revises facil. `/promover-prod` hace el commit unico al final.
 
 Ver detalle en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 

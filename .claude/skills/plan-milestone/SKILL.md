@@ -208,6 +208,17 @@ Genera `docs/milestones/<milestone>-plan.md` con esta estructura:
 
 - ...
 
+## Artefactos a verificar (URLs)
+
+> URLs que el asistente abrira en el browser de Cursor durante `/verificar-dev`
+> para autoverificacion antes de pasarle el checklist al usuario.
+
+- Editor de Apps Script DEV: `https://script.google.com/d/<DEV_SCRIPT_ID>/edit` (lo arma `/verificar-dev` desde environments.json)
+- Google Sheet de salida (si aplica): `<URL>`
+- Web App deployment (si aplica): `<URL>`
+- Carpeta de Drive de salida (si aplica): `<URL>`
+- Otros artefactos observables: `<descripcion + URL>`
+
 ## Checklist de verificacion (para /verificar-dev)
 
 - [ ] La funcion `<nombre>` corre sin errores en DEV

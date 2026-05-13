@@ -1,16 +1,30 @@
 ---
 name: verificar-dev
-description: Despliega el milestone implementado al ambiente DEV de Apps Script, valida que las propiedades requeridas esten configuradas, y guia al usuario por el checklist de verificacion del plan. No promueve a prod — eso lo hace /promover-prod.
+description: Valida el milestone implementado en 5 fases — revision de codigo, autoverificacion con el browser de Cursor, fix loop si encuentra problemas, checklist guiado al usuario, y marca como verificado. Itera con push a Apps Script DEV sin commits intermedios (los cambios se acumulan para que /promover-prod los commitee juntos).
 ---
 
 # /verificar-dev
 
-Ejecuta la fase de **verificacion** del loop por milestone. Despliega a DEV y guia la validacion funcional. Si el checklist pasa, actualiza estado y abre el camino a `/promover-prod`. Si falla, dirige a `/debug-error`.
+Ejecuta la fase de **verificacion** del loop. **No commitea ni promueve** — solo valida y itera. Si todo pasa, marca el milestone como verificado y queda listo para `/promover-prod`. Si algo falla, planea un fix mini-ciclo, lo implementa, lo sube a DEV y reanuda la verificacion.
 
 ## Cuando usar
 
-- Despues de `/ejecutar-milestone` (codigo implementado y commiteado).
-- El usuario dice: "validemos en dev", "despliega a dev", "verifica que funcione", "probemoslo".
+- Despues de `/ejecutar-milestone` (codigo en Apps Script DEV, cambios sin commitear).
+- El usuario dice: "validemos en dev", "verifica que funcione", "probemoslo", "revisemos".
+
+## Las 5 fases
+
+```
+A. Revision estatica   →   B. Autoverificacion   →   C. Fix loop si falla
+       (codigo)              (browser de Cursor)        (plan + ejecutar + push:dev)
+                                                                  │
+                                                                  ▼
+                                                          D. Checklist guiado
+                                                              al usuario
+                                                                  │
+                                                          E. Marcar verificado
+                                                              (deploy:dev)
+```
 
 ## Pre-checks (aborta si falla)
 
@@ -21,205 +35,257 @@ test -f environments.json
 
 Lee `.planning/state.json`. Casos:
 
-- **`activeMilestone` vacio** → "No hay milestone activo. Corre `/plan-milestone`."
-- **`status` ≠ `executed` y ≠ `verifying`**:
-  - `planning` o `planned` → "El milestone no esta implementado. Corre `/ejecutar-milestone` primero."
-  - `executing` → "La implementacion no termino. Termina `/ejecutar-milestone` primero."
-  - `promoted` o `closed` → "Este milestone ya esta cerrado. Si necesitas re-validar, replanea o trata como un debug."
-- **`status` = `verifying`** → "Ya hay una verificacion en curso. Continuamos desde el checklist o reiniciamos?"
+- **`status` ≠ `executed` y ≠ `verifying`** → segun valor:
+  - `planning` / `planned` → "El milestone no esta implementado. Corre `/ejecutar-milestone` primero."
+  - `executing` → "La implementacion no termino. Termina `/ejecutar-milestone`."
+  - `promoted` / `closed` → "Milestone cerrado. Para re-validar, replanea o trata como debug."
+- **`status` = `verifying`** → estamos retomando o iterando, eso es normal con esta skill.
 
-Lee `environments.json`. Si `dev.scriptId` esta vacio o con placeholder → "DEV no esta configurado. Corre `/config-appsscript`."
+Verifica `dev.scriptId` y el plan: `docs/milestones/<activeMilestone>-plan.md`.
 
-Verifica que exista el plan: `docs/milestones/<activeMilestone>-plan.md`.
-
-Verifica repo limpio:
-
-```bash
-git status --porcelain
-```
-
-Si hay cambios sin commitear → "Hay cambios sin commitear. ¿Los integro al milestone (volver a `/ejecutar-milestone`) o los dejo aparte?". No despliegues con codigo no commiteado.
+**Nota sobre cambios sin commitear**: es ESPERADO que haya cambios pendientes (es como ejecutar-milestone deja el estado). NO obligues a commitear.
 
 ## Plan que anuncias al usuario
 
-> Voy a validar el milestone **`<milestone>`** en DEV. El flujo es:
-> 1. Revisar que las propiedades de Script requeridas esten configuradas (si el plan menciona alguna).
-> 2. Desplegar el codigo a DEV con `npm run deploy:dev`.
-> 3. Abrir el editor de DEV en el navegador.
-> 4. Recorrer contigo el checklist del plan, item por item.
-> 5. Si todo pasa, sincronizar `docs/IDS.md` y marcar el milestone como verificado.
+> Voy a verificar el milestone **`<milestone>`** en 5 fases:
 >
-> **Recuerda**: en el editor solo vas a ejecutar funciones y leer logs. No edites codigo ahi.
+> 1. **Revision estatica** — leo el codigo recien escrito y lo contrasto contra el plan, el PRD y las reglas de CLAUDE.md.
+> 2. **Autoverificacion** — abro el editor de Apps Script DEV (y URLs relevantes — Sheet de salida, Web App si aplica) en el browser integrado de Cursor; ejecuto la funcion principal, leo logs, inspecciono outputs.
+> 3. **Fix loop** — si la revision estatica o la autoverificacion encuentra problemas, planeo el fix, lo implemento, lo subo a DEV y vuelvo a verificar.
+> 4. **Checklist contigo** — te guio paso a paso por el checklist del plan; tu confirmas cada item. Si algo falla, vamos al fix loop.
+> 5. **Marcar como verificado** — registro un deployment versionado en DEV (`deploy:dev`), sincronizo `docs/IDS.md`, dejo el milestone listo para `/promover-prod`.
+>
+> **No commiteo nada en esta skill** — los cambios se acumulan y el commit se hace en `/promover-prod`.
 >
 > ¿Procedo?
 
 Solo continua si aprueba.
 
-## Pasos detallados
+## Fase A — Revision estatica del codigo
 
-### 1. Marcar inicio de verificacion
-
-Actualiza `.planning/state.json`:
+### A.1 Marcar inicio
 
 ```json
-{
-  "status": "verifying",
-  "lastUpdated": "<ISO now>"
-}
+{ "status": "verifying", "lastUpdated": "<ISO now>" }
 ```
 
-### 2. Validar propiedades de Script
-
-Lee la seccion `## Property Service (claves a configurar)` del plan.
-
-Si hay claves listadas:
-
-> El plan requiere estas propiedades configuradas en Apps Script DEV:
-> - `RECIPIENT_EMAIL`
-> - `API_KEY_GEMINI`
->
-> Voy a abrir la pantalla de Script Properties en DEV. Por favor:
-> 1. Verifica que existan con valores correctos.
-> 2. Si falta alguna, agregala (no edites codigo, solo Settings).
-> 3. Vuelve a Cursor y confirma "listo".
-
-Abre la URL directa a Settings (no al editor de codigo):
+### A.2 Leer cambios pendientes
 
 ```bash
-SCRIPT_ID=$(node -e "console.log(require('./environments.json').dev.scriptId)")
-open "https://script.google.com/home/projects/$SCRIPT_ID/settings" 2>/dev/null || \
-  echo "Abre manualmente: https://script.google.com/home/projects/$SCRIPT_ID/settings"
+git status --short
+git diff
 ```
 
-(En Linux usa `xdg-open` en lugar de `open`.)
+Para cada archivo modificado o nuevo, revisa contra:
 
-Espera la confirmacion del usuario. **No avances hasta que confirme.**
+**1. Reglas de CLAUDE.md:**
+- ¿Hay API keys / tokens hardcodeados? (deben venir de `PropertiesService`)
+- ¿Hay archivo gigante con responsabilidades mezcladas?
+- ¿Hay funciones que se nombran o organizan distinto a lo que dice el plan?
 
-Si no hay claves en el plan, salta este paso.
+**2. Plan del milestone:**
+- ¿Estan todos los archivos del plan implementados?
+- ¿Falta algo de la lista de pasos?
+- ¿Los nombres de funciones / parametros corresponden?
 
-### 3. Construir descripcion del deployment
+**3. PRD:**
+- ¿La logica refleja el alcance del milestone?
+- ¿Hay algo que se salio del scope?
 
-Lee del plan:
+**4. Buenas practicas Apps Script:**
+- Triggers en funcion `installTriggers()` separada (no instalados en `main()`).
+- Manejo de errores minimo en limites externos (`UrlFetchApp`, `SpreadsheetApp.openById`, etc.).
+- Logs en `Logger.log()` con info util para debugging futuro.
+- Sin `console.log` (en Apps Script V8 funciona, pero la convencion es `Logger.log`).
+- Sin loops con llamadas a `SpreadsheetApp` repetidas (`getRange().getValue()` adentro del loop) — preferir batch.
 
-- `## Objetivo` (1 frase)
-- `activeMilestone` de state.json
+**5. Sintaxis y manifest:**
 
-Construye descripcion sugerida:
+```bash
+for f in $(git diff --name-only -- '*.js' '*.gs'); do node --check "$f"; done
+```
+
+Verifica `appsscript.json` valido:
+
+```bash
+node -e "JSON.parse(require('fs').readFileSync('appsscript.json','utf8'))"
+```
+
+### A.3 Decision
+
+- **Sin problemas**: pasa a Fase B.
+- **Problemas encontrados**: ve a Fase C (Fix loop) con la lista de problemas. Indica al usuario que problemas encontraste y propon el plan del fix.
+
+## Fase B — Autoverificacion con el browser de Cursor
+
+El asistente ejecuta una validacion funcional propia antes de involucrar al usuario. Usa las herramientas de browser/preview disponibles en Cursor (Claude in Chrome, Claude Preview, o el browser nativo).
+
+### B.1 Abrir editor de Apps Script DEV
+
+Obten el URL del editor de DEV:
+
+```bash
+node -e "console.log('https://script.google.com/d/' + require('./environments.json').dev.scriptId + '/edit')"
+```
+
+Abre esa URL en el browser de Cursor (usa la herramienta de browser disponible). Espera a que cargue. Si requiere autenticacion, dirige al usuario:
+
+> El browser pide autenticar con Google. Hazlo con tu cuenta Habi y dime cuando termine.
+
+### B.2 Ejecutar la funcion principal
+
+Identifica la funcion principal del milestone (la del entrypoint del plan; por default `main()`).
+
+Si el browser permite interaccion programatica:
+1. Selecciona la funcion en el dropdown del editor.
+2. Pulsa Ejecutar.
+3. Si pide autorizar permisos OAuth, autoriza con la cuenta del usuario (puede requerir interaccion humana — pausa y pide).
+4. Espera a que termine.
+5. Lee el panel de Registro de ejecuciones (logs).
+
+Si el browser no permite interaccion programatica, guia al usuario a hacerlo manualmente, mientras tu te mantienes en autoverificacion con los outputs.
+
+### B.3 Inspeccionar artefactos
+
+Lee la seccion `## Artefactos a verificar` del plan (URLs de Sheets, Web App, recipientes de correo, etc.). Para cada uno:
+
+- **Google Sheet**: abre el URL en el browser. Verifica que las hojas/columnas/filas esperadas existan y tengan los valores correctos.
+- **Web App URL**: navega y verifica respuesta esperada.
+- **Correos**: el asistente no puede leer la bandeja del usuario; pide al usuario que confirme la llegada en Fase D.
+- **Logs**: ya leidos en B.2.
+
+Captura screenshots si la herramienta lo permite, para registro.
+
+### B.4 Decision
+
+- **Todo se ve correcto**: pasa a Fase D (checklist con el usuario). No saltes D — la validacion final la hace siempre el usuario.
+- **Algo no se ve correcto**: ve a Fase C con descripcion del problema observado.
+
+## Fase C — Fix loop
+
+Cuando A o B detectan un problema, ejecutas un mini-ciclo de fix sin salir de la skill.
+
+### C.1 Reportar problema y proponer fix
+
+> 🔧 Encontre un problema:
+>
+> **Sintoma**: <que vi>
+> **Causa probable**: <hipotesis>
+> **Plan del fix**:
+> 1. ...
+> 2. ...
+> **Archivos a modificar**: <lista>
+>
+> ¿Apruebas el fix o ajustamos?
+
+Espera aprobacion. Si pide ajustar, itera.
+
+### C.2 Implementar el fix
+
+Aplica los cambios. Misma logica que `/ejecutar-milestone`:
+- Edit/Write sobre los archivos.
+- `node --check` por archivo modificado.
+- Sin commits, sin push a GitHub.
+
+### C.3 Subir a Apps Script DEV
+
+```bash
+npm run push:dev
+```
+
+### C.4 Documentar el fix en el plan
+
+Agrega entrada en `docs/milestones/<milestone>-plan.md` al final, bajo `## Fixes durante verificacion`:
+
+```markdown
+## Fixes durante verificacion
+
+- **<YYYY-MM-DD HH:MM>**: <sintoma>. Causa: <causa>. Fix: <descripcion> en `<archivo>`.
+```
+
+### C.5 Reanudar
+
+Vuelve a la fase donde se detecto el problema (A o B). Repite hasta que la fase pase.
+
+**Si despues de 3 ciclos de fix la misma fase sigue fallando**, pausa y replantea con el usuario:
+
+> Llevo 3 intentos en este problema. Probablemente mi modelo del bug esta mal. ¿Hablamos del sintoma con mas detalle antes de seguir intentando?
+
+## Fase D — Checklist guiado al usuario
+
+Lee `## Checklist de verificacion (para /verificar-dev)` del plan. Para cada item, guia al usuario.
+
+### D.1 Tipos de item
+
+#### Ejecucion manual de funcion
+
+> **Item**: <texto>
+>
+> 1. En el editor de DEV (ya abierto en el browser), selecciona `<funcion>` en el dropdown.
+> 2. Pulsa Ejecutar.
+> 3. Confirma si pasa lo esperado: `<criterio>`.
+> 4. Dime "ok", "no ok", o pega el error.
+
+#### Trigger time-driven
+
+> **Item**: <texto>
+>
+> Dos opciones:
+>
+> **A — Inmediata** (recomendada): ejecuta la funcion subyacente `<nombre>` directamente para simular lo que el trigger hara.
+>
+> **B — Realista**: ejecuta `installTriggers()` para instalar el trigger en DEV, espera al horario natural, vuelve cuando se ejecute.
+>
+> ¿Cual? Para validacion del primer milestone, recomiendo A.
+
+#### Side-effect observable
+
+> **Item**: <texto>
+>
+> Despues de ejecutar la funcion:
+> 1. Revisa <correo destino / hoja Y>.
+> 2. Confirma que el efecto esperado ocurrio.
+
+### D.2 Si el usuario reporta falla
+
+Ve a Fase C (Fix loop) con la info del usuario. Tras el fix, retoma el item del checklist.
+
+### D.3 Cuando el usuario confirme todos los items
+
+Pasa a Fase E.
+
+## Fase E — Marcar como verificado
+
+### E.1 Crear deployment versionado en DEV
+
+Hasta ahora todos los pushes a DEV han sido sin deployment (push raw). Ahora que esta validado, crea un deployment versionado para marcar el checkpoint:
+
+Construye descripcion sugerida del deployment:
 
 ```
-<milestone> - <objetivo, max 60 caracteres> - <YYYY-MM-DD HH:MM>
+<milestone> - <objetivo del plan, max 60 char> - <YYYY-MM-DD HH:MM>
 ```
-
-Ejemplo: `M1 - Procesar tickets pendientes y mandar reporte diario - 2026-05-12 14:30`
 
 Pregunta al usuario:
 
-> Voy a desplegar a DEV con esta descripcion:
+> Voy a crear el deployment versionado en DEV con esta descripcion:
 > > `<descripcion sugerida>`
 >
-> ¿La uso, o prefieres otra?
+> ¿La uso?
 
-Espera respuesta.
-
-### 4. Deploy a DEV
+Ejecuta:
 
 ```bash
 npm run deploy:dev -- --desc "<descripcion final>"
 ```
 
-Captura el output. Si falla:
+Esto actualiza `environments.json` con el nuevo `dev.deploymentId`.
 
-- **Apps Script API not enabled** → guia al usuario a [script.google.com/home/usersettings](https://script.google.com/home/usersettings).
-- **Permisos OAuth** → la primera vez que un scope nuevo se usa, hay que autorizar. Va a salir al ejecutar la funcion, no aqui.
-- **Otro error** → diagnostica antes de avanzar.
+### E.2 Sincronizar docs/IDS.md
 
-Verifica que `environments.json` quedo actualizado con el nuevo `deploymentId`.
+Lee `environments.json` y reescribe `docs/IDS.md` (gitignored) con la tabla de IDs actualizada.
 
-### 5. Abrir DEV en el navegador
-
-```bash
-npm run open:dev
-```
-
-Recordatorio claro:
-
-> Se abrio DEV. **No edites codigo en el editor.** Solo vamos a:
-> - Ejecutar una funcion (boton play arriba).
-> - Leer logs (panel "Registro de ejecuciones" abajo a la izquierda).
-> - Si es trigger: instalarlo desde la funcion `installTriggers()`.
-
-### 6. Recorrer checklist
-
-Lee el bloque `## Checklist de verificacion (para /verificar-dev)` del plan. Es una lista de items tipo `- [ ] ...`.
-
-Para cada item:
-
-#### Si involucra ejecucion manual de funcion
-
-> Item: <texto del item>
->
-> 1. En el editor, selecciona la funcion `<nombre>` en el dropdown de arriba.
-> 2. Pulsa "Ejecutar". Si pide autorizar permisos OAuth, acepta con tu cuenta Habi.
-> 3. Espera a que termine.
-> 4. Revisa el panel de ejecucion: ¿muestra lo esperado (`<criterio del item>`)?
-> 5. Vuelve a Cursor y dime: "ok", "no ok", o pega el error.
-
-#### Si involucra un trigger time-driven
-
-> Item: <texto del item>
->
-> Tienes dos opciones para validar:
->
-> **Opcion A (recomendada para validacion inmediata)**: ejecuta la funcion subyacente `<nombre>` directamente desde el editor, igual que arriba. Esto simula lo que el trigger hara cuando se dispare.
->
-> **Opcion B (validacion del trigger en su horario natural)**: ejecuta la funcion `installTriggers()` desde el editor para instalar el trigger en DEV. Despues, espera al horario natural (ej. 07:00) y vuelve a revisar logs.
->
-> ¿Cual opcion prefieres? Para el primer milestone, recomiendo A — es mas rapido.
-
-Si elige A, mismo flujo que ejecucion manual.
-
-Si elige B:
-1. Le pide instalar trigger.
-2. Marca el item como "pending — esperar horario natural" en state.json y termina la skill, dejando al usuario volver cuando el trigger se ejecute.
-
-#### Si involucra side-effects observables (correo enviado, hoja actualizada)
-
-> Item: <texto del item>
->
-> Despues de ejecutar la funcion:
-> 1. Revisa <correo destino / hoja Y / etc>.
-> 2. Confirma que el efecto esperado ocurrio.
-
-### 7. Si algun item falla
-
-Marca el item fallido en state.json:
-
-```json
-{
-  "status": "verifying",
-  "failedChecks": ["item que fallo"],
-  "lastUpdated": "<ISO now>"
-}
-```
-
-Dirige al usuario:
-
-> El item `<X>` no pasa. Vamos a diagnosticar con `/debug-error`. Pega el error que viste o el comportamiento inesperado, y trabajamos sobre eso.
-
-**No marques el milestone como verificado.** No corras `/promover-prod` con checks pendientes.
-
-### 8. Si todos los items pasan
-
-Sincroniza `docs/IDS.md` con el estado actual de `environments.json`:
-
-Lee `environments.json`, escribe `docs/IDS.md` con:
-- Script IDs (dev y prod)
-- Deployment IDs (dev recien actualizado, prod = lo que hubiera)
-- Descripcion del ultimo deploy
-- Timestamp
-- Links a editores
-
-Actualiza `.planning/state.json`:
+### E.3 Actualizar estado
 
 ```json
 {
@@ -229,28 +295,36 @@ Actualiza `.planning/state.json`:
 }
 ```
 
-### 9. Cierre
+### E.4 Cierre
 
-> Verificacion de `<milestone>` completa.
+> Verificacion de `<milestone>` completa ✓
 >
-> **Checklist**: todos los items pasan ✓
+> **Fase A — Revision estatica**: paso ✓
+> **Fase B — Autoverificacion**: paso ✓
+> **Fixes durante verificacion**: <n> (registrados en el plan)
+> **Fase D — Checklist del usuario**: paso ✓
 > **Deployment DEV**: `<deploymentId>` — `<descripcion>`
 > **docs/IDS.md**: sincronizado
 >
-> Siguiente paso: `/promover-prod` cuando estes listo para mover este milestone a produccion.
+> **Cambios sin commitear**: visibles en el panel Source Control de Cursor.
+>
+> Siguiente paso: `/promover-prod` cuando estes listo para mover este milestone a produccion. Esa skill hace el commit unico, lo sube a GitHub (`dev` y `main`) y despliega a Apps Script PROD.
 
 ## Errores comunes y como manejarlos
 
-- **`PropertiesService` retorna null** durante la ejecucion → propiedad no esta configurada. Volver al paso 2 con el usuario.
-- **`Authorization required`** → primera ejecucion de un scope nuevo. El usuario debe autorizar en el dialogo del editor. Es normal, no es error.
-- **Trigger instalado pero no se ejecuta a la hora esperada** → revisar zona horaria en `appsscript.json` (`"timeZone": "America/Bogota"`).
-- **Logs vacios despues de ejecutar** → el usuario probablemente no tiene abierto el panel de "Registro de ejecuciones". Guialo a abrirlo (icono abajo izquierda).
-- **`environments.json` con `dev.deploymentId` vacio despues del deploy** → el parser de `deploy.js` no capturo el ID. Lee output crudo y guardalo manualmente.
+- **Autorizacion OAuth pendiente** en la primera ejecucion → el usuario debe aprobar en el dialogo del editor. Es normal, no es error.
+- **Trigger no se ejecuta en horario esperado** → revisar `timeZone` en `appsscript.json` (`"America/Bogota"`).
+- **`PropertiesService` retorna null** → propiedad no configurada en DEV. Pausa, recuerda al usuario configurarla en Settings, retoma.
+- **Logs vacios despues de ejecutar** → panel de Registro de ejecuciones cerrado o el usuario ejecuto otra funcion. Reabre.
+- **Fix loop entra en circulo** (mismo sintoma despues de 3 intentos) → replantear con el usuario.
 
 ## Que NO hacer
 
-- No despliegues a PROD en esta skill. **PROD se toca solo en `/promover-prod`.**
-- No edites codigo en el editor web bajo ningun motivo. Si el usuario reporta que "edito directo y arreglo algo", reorientalo: hay que volver a Cursor, replicar el cambio en local, commitear y volver a desplegar — sino `prod` quedara distinto a `dev`.
-- No saltes la verificacion de Script Properties. Es la causa #1 de fallos en primera ejecucion.
+- **No commitees**. Esto es responsabilidad de `/promover-prod`.
+- **No hagas `git push` a GitHub.** Tambien de `/promover-prod`.
+- **No despliegues a PROD ni corras `npm run promote`.** Esta skill solo toca DEV.
+- No edites codigo en el editor web. Si el usuario reporta que edito ahi, reorientalo: el cambio se hace en local y vuelve a `npm run push:dev`.
 - No marques `status: "verified"` si algun item del checklist no paso.
-- No instales triggers en codigo de produccion. `installTriggers()` se ejecuta manualmente, no automaticamente.
+- No saltes Fase D — la validacion final con el usuario es obligatoria. Tu autoverificacion (B) es complemento, no reemplazo.
+- No instales triggers automaticamente. `installTriggers()` se ejecuta manualmente.
+- No corras `clasp deploy` directo; usa `npm run deploy:dev` para que registre el `deploymentId` en `environments.json`.

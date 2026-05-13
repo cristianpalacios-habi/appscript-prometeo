@@ -1,16 +1,24 @@
 ---
 name: promover-prod
-description: Promueve el milestone validado en DEV a PROD. Verifica que las propiedades de Script en PROD esten configuradas, despliega via npm run promote, hace un smoke test minimo en PROD, crea un tag de git y cierra el milestone en el estado del proyecto.
+description: Cierra el milestone verificado. Hace UN solo commit con todos los cambios acumulados, lo sube a las ramas dev y main en GitHub en ese orden, y por ultimo despliega a Apps Script PROD via npm run promote. Crea tag de git, smoke test minimo y cierra el milestone en el estado del proyecto.
 ---
 
 # /promover-prod
 
-Ejecuta la fase de **promocion** del loop. Mueve a PROD el codigo validado en DEV, sin modificarlo. Cierra el milestone activo y deja trazabilidad para auditoria.
+Cierra el milestone validado. Es la unica skill del loop que **commitea**, **sube a GitHub** y **toca PROD**. Lo hace en este orden exacto:
+
+```
+1. Commit del milestone (un solo commit, todos los cambios)
+2. Push a rama `dev` en GitHub      ← checkpoint pre-prod
+3. Push a rama `main` en GitHub     ← canonical
+4. Apps Script PROD (npm run promote)
+5. Tag git + smoke test + cierre del milestone
+```
 
 ## Cuando usar
 
-- Despues de `/verificar-dev` con todos los items del checklist pasando.
-- El usuario dice: "promueve a prod", "vamos a produccion", "saquemoslo a prod", "subelo a prod".
+- Despues de `/verificar-dev` con `status: "verified"`.
+- El usuario dice: "promueve a prod", "vamos a produccion", "saquemoslo a prod".
 
 ## Pre-checks (aborta si falla)
 
@@ -21,44 +29,56 @@ test -f environments.json
 
 Lee `.planning/state.json`. Casos:
 
-- **`activeMilestone` vacio** → "No hay milestone activo."
 - **`status` ≠ `verified`** → segun valor:
   - `planning` / `planned` / `executing` → "El milestone no esta validado. Corre `/ejecutar-milestone` y luego `/verificar-dev`."
-  - `verifying` → "La verificacion no termino. Termina el checklist con `/verificar-dev` primero."
-  - `promoted` o `closed` → "Este milestone ya esta en prod. ¿Quieres re-promover (raro) o avanzar al siguiente con `/nuevo-milestone`?"
-- **`failedChecks` no vacio** → "Hay items del checklist que no pasaron: <lista>. No promuevo hasta resolver. Corre `/debug-error`."
+  - `verifying` → "La verificacion no termino. Termina con `/verificar-dev`."
+  - `promoted` / `closed` → "Este milestone ya esta en prod. ¿Re-promover o avanzar con `/nuevo-milestone`?"
+- **`failedChecks` no vacio** → "Hay items del checklist sin pasar: <lista>. No promuevo hasta resolver. Vuelve a `/verificar-dev`."
 
 Lee `environments.json`:
 
-- `dev.deploymentId` debe existir (señal de DEV validado).
+- `dev.deploymentId` debe existir (señal de DEV validado con deployment versionado).
 - `prod.scriptId` debe estar configurado.
 
 Si falta algo → diagnostica y dirige a la skill correspondiente.
 
-Verifica repo limpio:
+Verifica que hay cambios pendientes para commitear (es lo esperado):
 
 ```bash
 git status --porcelain
 ```
 
-Si hay cambios → "Hay cambios sin commitear. PROD debe reflejar exactamente lo validado en DEV. Commitea o descarta antes de promover."
+- Si vacio → "No hay cambios para promover. ¿Olvidaste `/ejecutar-milestone` o ya promoviste este milestone?"
+- Si hay cambios → ok, sigue.
 
-Verifica que el ultimo commit corresponda al milestone:
+Verifica que estamos en la rama `main` local:
 
 ```bash
-git log -1 --format=%s
+git branch --show-current
 ```
 
-Idealmente arranca con `feat(<milestone>):`. Si no, alerta pero no bloquea — pregunta al usuario si esta seguro.
+- Si no es `main` → "Estas en `<rama>`. El flujo Prometeo trabaja sobre `main` local. ¿Cambio a main o tienes contexto que justifique trabajar en otra rama?"
+
+Verifica que las ramas remotas `dev` y `main` existen:
+
+```bash
+git ls-remote --heads origin dev main
+```
+
+- Si falta `dev` remota → la skill la crea en el paso 3 (no es error).
+- Si falta `main` remota → "El repo no tiene rama `main` en GitHub. Revisa `/config-appsscript` o crea manualmente con `git push -u origin main`."
 
 ## Plan que anuncias al usuario
 
-> Voy a promover **`<milestone>`** de DEV a PROD. El flujo es:
-> 1. Configurar las propiedades de Script en PROD (probablemente con valores DISTINTOS a DEV — destinatarios reales, API keys de produccion).
-> 2. Desplegar el codigo a PROD con `npm run promote`.
-> 3. Smoke test minimo en PROD: ejecutar la funcion principal y confirmar que arranca sin errores.
-> 4. Crear un tag de git para trazabilidad: `<milestone>-prod-<YYYYMMDD>`.
-> 5. Cerrar el milestone en el estado del proyecto.
+> Voy a promover **`<milestone>`** a PROD. El flujo es:
+>
+> 1. Configurar las propiedades de Script en PROD (probablemente con valores distintos a DEV — destinatarios reales, API keys de produccion).
+> 2. Hacer **un solo commit** con todos los cambios del milestone.
+> 3. Subir el commit a la rama `dev` en GitHub (checkpoint pre-produccion).
+> 4. Subir a la rama `main` en GitHub (canonical).
+> 5. Desplegar a Apps Script PROD con `npm run promote`.
+> 6. Smoke test minimo opcional en PROD.
+> 7. Crear tag de git `<milestone>-prod-<YYYYMMDD>` y cerrar el milestone.
 >
 > ⚠️ **Lo que pase en PROD tiene consecuencias reales** (correos reales, hojas reales, datos del negocio). Una vez promovido, modificar PROD solo se hace replicando el cambio en DEV → verificando → promoviendo de nuevo.
 >
@@ -70,7 +90,7 @@ Solo continua si aprueba.
 
 ### 1. Configurar propiedades de Script en PROD
 
-Lee la seccion `## Property Service (claves a configurar)` del plan (`docs/milestones/<milestone>-plan.md`).
+Lee la seccion `## Property Service (claves a configurar)` del plan.
 
 Si hay claves:
 
@@ -82,10 +102,7 @@ Si hay claves:
 > | `SHEET_ID` | Hoja real de operacion vs hoja de prueba |
 > | `API_KEY_*` | Key de produccion vs key de desarrollo |
 >
-> Voy a abrir la pantalla de Script Properties en PROD. Por favor:
-> 1. Verifica/configura cada clave con su valor de produccion.
-> 2. No edites codigo — solo Settings.
-> 3. Vuelve a Cursor y confirma "listo".
+> Voy a abrir Settings de PROD. Verifica/configura cada clave con su valor de PRODUCCION. No edites codigo — solo Settings. Vuelve a Cursor y confirma.
 
 Abre Settings de PROD:
 
@@ -96,33 +113,107 @@ open "https://script.google.com/home/projects/$PROD_SCRIPT_ID/settings" 2>/dev/n
   echo "Abre manualmente: https://script.google.com/home/projects/$PROD_SCRIPT_ID/settings"
 ```
 
-**Espera la confirmacion del usuario. No avances hasta que confirme.**
+**Espera confirmacion del usuario. No avances hasta que confirme.**
 
 Si no hay claves en el plan, salta este paso.
 
-### 2. Marcar inicio de promocion
+### 2. Hacer el commit unico
 
-Actualiza `.planning/state.json`:
+Muestra al usuario el resumen de cambios:
+
+```bash
+git status --short
+git diff --stat
+```
+
+> Resumen de cambios del milestone:
+> - `Main.js` (modificado, +12)
+> - `Sheets.js` (nuevo, 45 lineas)
+> - `appsscript.json` (modificado, +1 scope)
+> - `docs/milestones/<milestone>-plan.md` (con desviaciones y fixes documentados)
+> - `.planning/state.json`
+>
+> Voy a commitear todo esto como **un solo commit**. Mensaje sugerido:
+> > `feat(<milestone>): <objetivo del plan>`
+>
+> ¿Apruebas o quieres ajustar el mensaje?
+
+Espera respuesta.
+
+Lee del plan el `## Objetivo` (1 frase). Construye:
+
+```
+feat(<milestone>): <objetivo>
+
+- archivo1: cambio principal
+- archivo2: cambio principal
+- ...
+
+Plan: docs/milestones/<milestone>-plan.md
+```
+
+Stage todo lo no-gitignored:
+
+```bash
+git add -A
+```
+
+Commit:
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat(<milestone>): <objetivo>
+
+- <archivo1>: <cambio>
+- <archivo2>: <cambio>
+
+Plan: docs/milestones/<milestone>-plan.md
+EOF
+)"
+```
+
+Marca status:
 
 ```json
-{
-  "status": "promoting",
-  "lastUpdated": "<ISO now>"
-}
+{ "status": "promoting", "lastUpdated": "<ISO now>" }
 ```
 
-### 3. Construir descripcion del deployment de PROD
+### 3. Push a rama `dev` en GitHub
 
-Lee:
+```bash
+if git ls-remote --heads origin dev | grep -q dev; then
+  # dev existe en remoto
+  git push origin main:dev
+else
+  # primera vez: crea la rama remota dev a partir del estado local actual
+  git push origin main:refs/heads/dev
+fi
+```
 
-- `## Objetivo` del plan.
-- `activeMilestone` de state.json.
-- `dev.deploymentDescription` de environments.json (para referencia).
+Si falla por divergencia (raro pero posible si alguien mas escribio en `dev` remoto):
 
-Sugiere:
+> La rama `dev` remota tiene commits que tu local no tiene. Necesitamos resolver antes de promover.
+>
+> Opciones:
+> - Si confias en que tu version es la correcta: `git push --force origin main:dev` (sobrescribe). Te aviso porque es destructivo.
+> - Si necesitas integrar los cambios remotos: paramos aqui y diagnosticamos.
+
+**No hagas force push sin aprobacion explicita del usuario.**
+
+### 4. Push a rama `main` en GitHub
+
+```bash
+git push origin main:main
+```
+
+Mismo manejo de divergencia con aprobacion explicita si falla.
+
+### 5. Desplegar a Apps Script PROD
+
+Construye descripcion del deployment:
 
 ```
-<milestone> - PROD - <objetivo, max 60 caracteres> - <YYYY-MM-DD HH:MM>
+<milestone> - PROD - <objetivo, max 60 char> - <YYYY-MM-DD HH:MM>
 ```
 
 Pregunta:
@@ -132,36 +223,33 @@ Pregunta:
 >
 > ¿La uso?
 
-### 4. Promover a PROD
+Ejecuta:
 
 ```bash
 npm run promote -- --desc "<descripcion final>"
 ```
 
-Captura output. Verifica que `environments.json` quedo con nuevo `prod.deploymentId`.
+Verifica que `environments.json` quedo con nuevo `prod.deploymentId`.
 
 Si falla:
-- **Apps Script API not enabled en prod** → guia al usuario a `script.google.com/home/usersettings`.
+- **Apps Script API not enabled en prod** → guia a `script.google.com/home/usersettings`.
 - **Otro error** → diagnostica antes de avanzar. **No marques como promovido si fallo.**
 
-### 5. Smoke test minimo en PROD
+### 6. Smoke test minimo en PROD
 
-⚠️ **Pregunta antes de ejecutar:** la funcion principal puede tener efectos reales (correos a destinatarios reales, modificacion de hojas de operacion).
+⚠️ Pregunta antes de ejecutar — la funcion principal puede tener efectos reales.
 
 > Smoke test en PROD: dos opciones.
 >
-> **Opcion A — solo verificar deployment** (sin ejecutar funciones):
->   Confirmo que el deployment existe en PROD via `clasp deployments`. No ejecuto nada. Rapido y sin efectos.
+> **A — Solo verificar deployment**: confirmo via `clasp deployments` que el nuevo deploymentId esta listado. Sin efectos.
 >
-> **Opcion B — ejecutar funcion principal en PROD** (efectos reales):
->   Abro el editor de PROD, ejecutas `<funcion>`, validamos que arranca sin errores. **Esto va a mandar correos / modificar hojas reales.** Solo recomendable si:
->   - Es la primera vez que algo del proyecto llega a PROD (smoke test inicial).
->   - El milestone es seguro de ejecutar (no destructivo, no masivo).
->   - Quieres validacion end-to-end inmediata, no esperar al trigger natural.
+> **B — Ejecutar funcion principal**: abro el editor de PROD, ejecutas `<funcion>`, validamos que arranca sin errores. **Efectos reales** (correos, hojas).
 >
 > ¿Cual prefieres?
 
 #### Si elige A
+
+Verifica deployments en PROD sin alterar `.clasp.json` permanentemente:
 
 ```bash
 PROD_SCRIPT_ID=$(node -e "console.log(require('./environments.json').prod.scriptId)")
@@ -181,7 +269,7 @@ node -e "
 "
 ```
 
-Confirma con el usuario que ve el nuevo deploymentId listado.
+Confirma con el usuario que ve el nuevo deploymentId.
 
 #### Si elige B
 
@@ -189,41 +277,29 @@ Confirma con el usuario que ve el nuevo deploymentId listado.
 npm run open:prod
 ```
 
-Guia al usuario igual que en `/verificar-dev` paso 6:
-
-> 1. Selecciona `<funcion>` en el dropdown.
-> 2. Pulsa Ejecutar.
-> 3. Confirma si arranca sin error o pega el error.
-
-**Si arranca sin error**: smoke test pasa.
-
-**Si falla**: marca el milestone como roto en prod:
+Guia al usuario igual que `/verificar-dev` Fase D. Si arranca sin error: pasa. Si falla:
 
 ```json
-{
-  "status": "promoted-but-broken",
-  "lastUpdated": "<ISO now>"
-}
+{ "status": "promoted-but-broken", "lastUpdated": "<ISO now>" }
 ```
 
-Y dirige al usuario:
+Aviso:
 
-> El smoke test en PROD fallo. Esto es serio porque PROD ya tiene el codigo desplegado pero no esta funcionando. Acciones:
->
-> 1. Si el error es por propiedad faltante, configurala (paso 1 de esta skill) y reintenta el smoke test.
-> 2. Si el error es por bug en codigo, hay que tratarlo como bug en prod: vuelve a DEV (`/debug-error`), arregla, valida, promueve.
-> 3. Mientras tanto, **no desinstales triggers ni asumas que prod esta operando** — esta desplegado pero no validado.
+> Smoke test en PROD fallo. Esto es serio: PROD ya tiene el codigo desplegado pero no funciona. Acciones:
+> 1. Si es propiedad faltante, configurala (paso 1) y reintenta.
+> 2. Si es bug en codigo, vuelve a `/debug-error` — el fix arranca un nuevo mini-milestone.
+> 3. No desinstales triggers ni asumas que prod esta operando.
 
-### 6. Crear tag de git
+### 7. Crear tag de git
 
 ```bash
 TAG="<milestone>-prod-$(date +%Y%m%d)"
-git tag -a "$TAG" -m "Promocion a PROD: <milestone> - <objetivo del plan>"
+git tag -a "$TAG" -m "Promocion a PROD: <milestone> - <objetivo>"
 ```
 
-Pregunta al usuario:
+Pregunta al usuario si sube el tag:
 
-> Hice el tag `<TAG>` localmente. ¿Lo subo a GitHub para que quede registro?
+> Tag local `<TAG>` creado. ¿Lo subo a GitHub?
 
 Si si:
 
@@ -231,9 +307,9 @@ Si si:
 git push origin "$TAG"
 ```
 
-### 7. Cerrar el milestone en el estado
+### 8. Cerrar el milestone en el estado
 
-Lee `.planning/state.json`. Actualiza:
+Actualiza `.planning/state.json`:
 
 ```json
 {
@@ -248,45 +324,63 @@ Lee `.planning/state.json`. Actualiza:
       "closedAt": "<YYYY-MM-DD>",
       "deploymentIdDev": "<dev.deploymentId>",
       "deploymentIdProd": "<prod.deploymentId>",
-      "tag": "<TAG>"
+      "tag": "<TAG>",
+      "commit": "<git rev-parse HEAD>"
     }
   ]
 }
 ```
 
-### 8. Sincronizar docs/IDS.md
+### 9. Sincronizar docs/IDS.md
 
-Igual que en `/verificar-dev`: lee `environments.json` y reescribe `docs/IDS.md` con los nuevos valores de PROD.
+Lee `environments.json` y reescribe `docs/IDS.md` con los nuevos valores de PROD.
 
-### 9. Cierre
+### 10. Commit de cierre (estado + IDS)
+
+`.planning/state.json` quedo modificado tras paso 8. Hacer un mini-commit de cierre:
+
+```bash
+git add .planning/state.json
+git commit -m "chore(<milestone>): registrar promocion a PROD"
+git push origin main:main
+git push origin main:dev
+```
+
+### 11. Cierre
 
 > `<milestone>` promovido a PROD ✓
 >
-> **Deployment PROD**: `<deploymentId>` — `<descripcion>`
+> **Commit del milestone**: `<hash corto>` — `feat(<milestone>): <objetivo>`
+> **GitHub**:
+>   - rama `dev`: actualizada ✓
+>   - rama `main`: actualizada ✓
+> **Apps Script PROD**: deployment `<deploymentId>` — `<descripcion>` ✓
+> **Smoke test**: <A o B, resultado>
 > **Tag git**: `<TAG>` (subido a GitHub: si/no)
-> **Smoke test**: <opcion A o B, resultado>
-> **Historico**: registrado en `.planning/state.json`
 >
-> **Acciones manuales que puedes querer hacer ahora**:
-> - Instalar triggers en PROD si el milestone los requiere (ejecuta `installTriggers()` desde el editor de PROD una sola vez).
+> **Acciones manuales pendientes**:
+> - Instalar triggers en PROD si el milestone los requiere (ejecuta `installTriggers()` una vez desde el editor de PROD).
 > - Avisar al equipo / stakeholders.
-> - Si era el ultimo milestone del proyecto: **medir el KPI definido en el PRD** y comparar con la meta.
+> - Si era el ultimo milestone: medir el KPI definido en el PRD y comparar con la meta.
 >
 > Si hay mas milestones pendientes, corre `/nuevo-milestone` para arrancar el siguiente.
 
 ## Errores comunes y como manejarlos
 
-- **Propiedades de PROD con valores de DEV** → el usuario olvido cambiarlos. Los efectos pueden ser graves (correos al destinatario de prueba en lugar del real, escritura en hoja equivocada). Si lo detectas en el smoke test, alerta inmediatamente.
-- **Tag de git ya existe** → `<milestone>-prod-<fecha>` puede chocar si re-promueves el mismo dia. Agrega sufijo `-v2` o pregunta al usuario.
-- **Push de tag falla** → el usuario no tiene permisos de push tags. Notifica pero no bloquea — el tag local sigue siendo util.
-- **`clasp deployments` no muestra el nuevo deploymentId** → el deploy fallo silencioso. Revisa logs de `promote.js`.
+- **Propiedades de PROD con valores de DEV** → el usuario olvido cambiarlos. Si el smoke test B lo expone, alerta inmediatamente.
+- **Tag de git ya existe** → agrega sufijo `-v2` o pregunta.
+- **Push de tag falla por permisos** → notifica pero no bloquea; el tag local sigue util.
+- **`dev` o `main` remoto divergen** → no fuerces, pregunta al usuario.
+- **`clasp deployments` no muestra el nuevo deploymentId** → revisa logs de `promote.js`.
 
 ## Que NO hacer
 
 - No promuevas sin `status: "verified"` previo.
-- No edites codigo (ni en local ni en prod) dentro de esta skill. Si necesitas cambiar algo, vuelves a `/ejecutar-milestone` o `/debug-error`.
-- No ejecutes funciones destructivas o masivas como "smoke test" en PROD sin advertir al usuario.
-- No hagas `git push --force` ni `--delete` de tags. Si algo sale mal, dejalo y diagnostica.
+- No edites codigo en esta skill. Si hay que cambiar algo, vuelves a `/debug-error` o `/ejecutar-milestone`.
+- No ejecutes funciones destructivas o masivas como "smoke test" en PROD sin advertir.
+- No hagas `git push --force` sin aprobacion explicita del usuario.
+- No hagas `git push --delete` de tags.
 - No marques `status: "promoted"` si el smoke test fallo.
-- No ofrezcas rollback automatico. Rollback en Apps Script es complejo (deploymentId previo en PROD existe pero los triggers ya estan en HEAD); para usuario no-tecnico, el flujo seguro es: fix en dev → verificar → promover de nuevo.
-- No instales triggers automaticamente al promover. Que el usuario los instale conscientemente (es accion con efectos reales).
+- No ofrezcas rollback automatico — para usuario no-tecnico, el flujo seguro es fix en dev → verificar → promover de nuevo.
+- No instales triggers automaticamente al promover. Que el usuario los instale conscientemente.
+- **No saltes el orden**: primero commit, despues `dev`, despues `main`, despues PROD. No al reves, no en paralelo.

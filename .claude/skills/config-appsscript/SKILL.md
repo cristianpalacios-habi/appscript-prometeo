@@ -223,7 +223,37 @@ Para el remote URL:
 git config --get remote.origin.url || echo "(sin remoto configurado todavia)"
 ```
 
-### 9. Recordatorio sobre el PRD
+### 9. Crear rama `dev` en GitHub
+
+`/promover-prod` espera que la rama `dev` exista en GitHub. La creamos vacia (apuntando al mismo commit de main) para que el primer milestone pueda promover sin friccion.
+
+Verifica si ya existe:
+
+```bash
+git ls-remote --heads origin dev | grep -q dev
+```
+
+Si no existe:
+
+```bash
+git push origin main:refs/heads/dev
+```
+
+Verifica que existe ahora:
+
+```bash
+git ls-remote --heads origin dev
+```
+
+Si el repo no tiene `main` en remoto todavia (caso raro tras clone fresh de template), primero:
+
+```bash
+git push -u origin main
+```
+
+Si falla por permisos del remoto → "No tengo permisos de push en el remoto. Verifica que tienes acceso al repo en GitHub."
+
+### 10. Recordatorio sobre el PRD
 
 Verifica si existe `docs/PRD.md`:
 

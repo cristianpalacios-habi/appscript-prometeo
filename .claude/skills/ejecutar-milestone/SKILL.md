@@ -1,11 +1,11 @@
 ---
 name: ejecutar-milestone
-description: Implementa el plan aprobado del milestone activo. Escribe codigo en archivos separados por responsabilidad, sin desplegar. Solo pausa si encuentra una desviacion del plan que requiere aprobacion. Al terminar, hace commit con mensaje convencional.
+description: Implementa el plan aprobado del milestone activo. Escribe codigo local en archivos separados por responsabilidad, sube el codigo a Apps Script DEV (push, sin deployment). No hace commits — los cambios quedan en el working directory para que el usuario los revise en el panel Source Control de Cursor.
 ---
 
 # /ejecutar-milestone
 
-Ejecuta el plan generado por `/plan-milestone`. **Escribe codigo local; no despliega.** El deploy es responsabilidad de `/verificar-dev`.
+Ejecuta el plan generado por `/plan-milestone`. **Escribe codigo local y lo sube a Apps Script DEV.** No commitea — los cambios se acumulan sin commitear hasta `/promover-prod`, asi el usuario puede ver toda la diferencia del milestone en un solo lugar (Source Control de Cursor).
 
 ## Cuando usar
 
@@ -17,15 +17,17 @@ Ejecuta el plan generado por `/plan-milestone`. **Escribe codigo local; no despl
 ```bash
 test -f .planning/state.json
 test -f docs/PRD.md
+test -f environments.json
 ```
 
 Lee `.planning/state.json`. Casos:
 
 - **Sin `state.json` o `activeMilestone` vacio** → "No hay milestone activo. Corre `/plan-milestone` primero."
-- **`status` ≠ `planned`** → segun valor:
+- **`status` ≠ `planned` y ≠ `executing` y ≠ `verifying`** → segun valor:
   - `planning` → "El plan no esta aprobado todavia. Termina `/plan-milestone` primero."
-  - `executing` → "Ya hay una ejecucion en curso. ¿Continuamos donde quedo o reiniciamos? Si reinicias, revisa que `git status` no tenga cambios que pierdas."
-  - `verifying` / `promoted` / `closed` → "Este milestone ya esta en una fase posterior. Si quieres re-ejecutarlo, corre `/plan-milestone` para replanear, o `/nuevo-milestone` para empezar el siguiente."
+  - `promoted` o `closed` → "Este milestone ya esta en una fase posterior. Si quieres re-ejecutarlo, replanea con `/plan-milestone`."
+
+Si `status` = `executing` o `verifying`, **estamos retomando o iterando** — eso es normal con esta skill porque no hay commits intermedios; los cambios pendientes ya estan en el working directory.
 
 Verifica que exista el plan:
 
@@ -35,13 +37,13 @@ test -f docs/milestones/<activeMilestone>-plan.md
 
 Si no existe → "El plan del milestone activo no esta. Corre `/plan-milestone`."
 
-Verifica que el repo este limpio:
+Verifica `dev.scriptId`:
 
 ```bash
-git status --porcelain
+node -e "const e=require('./environments.json'); if(!e.dev?.scriptId || e.dev.scriptId.startsWith('PEGA_AQUI')) process.exit(1)"
 ```
 
-Si hay cambios sin commitear, avisa al usuario y pregunta si los descarta, los commitea aparte o los integra al milestone.
+Si falla → "DEV no esta configurado. Corre `/config-appsscript`."
 
 ## Plan que anuncias al usuario
 
@@ -49,10 +51,11 @@ Si hay cambios sin commitear, avisa al usuario y pregunta si los descarta, los c
 >
 > **Forma de trabajar**:
 > - Implemento todos los pasos del plan de corrido.
-> - **Solo pauso si encuentro una desviacion** del plan (un scope OAuth que no estaba, un trigger distinto, un archivo extra que el plan no contemplaba).
+> - **No commiteo nada** — los cambios quedan visibles en el panel Source Control de Cursor.
+> - **Solo pauso si encuentro una desviacion** del plan (scope OAuth nuevo, propiedad nueva, archivo extra no contemplado, trigger distinto).
 > - Detalles internos (helpers, naming, formato) los resuelvo sin pausar.
-> - Al terminar, hago **un solo commit** con mensaje `feat(<milestone>): <objetivo>`.
-> - **No despliego.** Eso lo haces despues con `/verificar-dev`.
+> - Al terminar, **subo el codigo a Apps Script DEV** con `npm run push:dev`.
+> - El commit se hace despues, en `/promover-prod`, con todos los cambios del milestone juntos.
 >
 > ¿Procedo?
 
@@ -100,7 +103,7 @@ Reglas de organizacion (de CLAUDE.md):
   }
   ```
 
-  Y documenta al usuario en el cierre que debe configurar las propiedades en el editor (Settings > Script Properties — unica excepcion donde toca entrar al editor, pero NO a editar codigo).
+  Documenta al usuario en el cierre que debe configurar las propiedades en el editor de DEV (Settings > Script Properties). Es la unica excepcion donde entra al editor — y solo a Settings, no a editar codigo.
 
 - **`appsscript.json`**: si el plan agrega scopes nuevos, edita el manifest con los scopes listados. No agregues scopes que el plan no menciona.
 
@@ -123,8 +126,8 @@ Una desviacion = cambio en el contrato del plan con el usuario. **Pausa y pide a
 - Necesitas un **scope OAuth** no listado en el plan.
 - Necesitas una **propiedad de Script** no listada.
 - Necesitas un **archivo nuevo** que el plan no menciona (mas alla de helpers triviales).
-- El **trigger** debe ser distinto al planeado (otra frecuencia, otro evento).
-- Una **regla de negocio** se interpreta distinto al PRD (orden de columnas, formato de fecha, criterio de filtro).
+- El **trigger** debe ser distinto al planeado.
+- Una **regla de negocio** se interpreta distinto al PRD.
 
 Formato de pausa:
 
@@ -135,78 +138,47 @@ Formato de pausa:
 > **Propongo**: <ajuste>
 > **Impacto**: <efecto en el milestone o en futuros milestones>
 >
-> ¿Apruebas el ajuste? Si si, actualizo el plan y sigo. Si no, dimelo y reorganizo.
+> ¿Apruebas el ajuste?
 
-Si el usuario aprueba la desviacion, **actualiza `docs/milestones/<milestone>-plan.md`** con el cambio (es la fuente de verdad viva), y continua.
+Si aprueba, **actualiza `docs/milestones/<milestone>-plan.md`** con el cambio y continua.
 
-No pauses por:
+No pauses por: naming de variables, estructura interna de funciones, helpers privados, comentarios.
 
-- Naming de variables internas.
-- Estructura interna de funciones.
-- Helpers privados que no afectan el contrato externo.
-- Comentarios en codigo (no los agregues a menos que el WHY sea no obvio — ver CLAUDE.md).
-
-### 6. Validacion final
-
-Antes de commit, corre:
+### 6. Subir codigo a Apps Script DEV
 
 ```bash
-git status
+npm run push:dev
+```
+
+Esto sube el codigo al proyecto DEV sin crear deployment (la version "viva" del editor refleja el codigo recien escrito).
+
+Si falla:
+- **Apps Script API not enabled** → guia al usuario a `script.google.com/home/usersettings` para habilitarla.
+- **Otro error** → diagnostica antes de avanzar.
+
+### 7. Resumen de cambios al usuario
+
+Muestra:
+
+```bash
+git status --short
 git diff --stat
 ```
 
-Muestra al usuario el resumen de cambios:
+Resumen:
 
-> Archivos modificados/creados:
-> - `Main.js` (+12 lineas)
+> Implementacion lista. Cambios pendientes (sin commit):
+> - `Main.js` (modificado, +12 lineas)
 > - `Sheets.js` (nuevo, 45 lineas)
-> - `appsscript.json` (+1 scope)
+> - `appsscript.json` (modificado, +1 scope)
+> - `docs/milestones/<milestone>-plan.md` (si hubo desviacion aprobada)
+> - `.planning/state.json`
 >
-> ¿Reviso algo antes de commitear, o procedo?
+> **Codigo subido a Apps Script DEV** ✓
+>
+> Puedes revisar todos los cambios en el panel **Source Control** de Cursor (icono de rama en la barra lateral). **No hay commit aun** — el commit se hace en `/promover-prod` con todo el milestone junto.
 
-Espera respuesta. Si pide revisar, mostrale los archivos relevantes y espera.
-
-### 7. Commit
-
-Stage solo lo relevante (NO toques `environments.json` ni `docs/IDS.md` — ya estan gitignored):
-
-```bash
-git add Main.js Sheets.js appsscript.json docs/milestones/<milestone>-plan.md .planning/state.json
-```
-
-Lee el `Objetivo` (1 frase) del plan. Commit:
-
-```bash
-git commit -m "feat(<milestone>): <objetivo>
-
-- archivo1: cambio principal
-- archivo2: cambio principal
-- ...
-
-Plan: docs/milestones/<milestone>-plan.md"
-```
-
-### 8. Push a GitHub (opcional, con confirmacion)
-
-Pregunta al usuario:
-
-> Codigo commiteado en local. ¿Hago `git push` para respaldar en GitHub? (recomendado)
-
-Si si:
-
-```bash
-git push
-```
-
-Si el upstream no esta seteado:
-
-```bash
-git push -u origin $(git branch --show-current)
-```
-
-Si no, deja al usuario decidir cuando.
-
-### 9. Marcar fin de ejecucion
+### 8. Marcar fin de ejecucion
 
 Actualiza `.planning/state.json`:
 
@@ -217,38 +189,35 @@ Actualiza `.planning/state.json`:
 }
 ```
 
-### 10. Cierre
+### 9. Cierre
 
-Resume:
-
-> Implementacion lista para `<milestone>`.
+> Implementacion de `<milestone>` lista.
 >
-> **Archivos**: <lista>
-> **Commit**: `<hash corto>` — `feat(<milestone>): <objetivo>`
-> **Push a GitHub**: si/no
+> **Codigo en Apps Script DEV** ✓
+> **Cambios pendientes de commit**: visibles en Source Control de Cursor
 >
 > **Acciones manuales pendientes** (si aplica):
-> - Configurar propiedades en el editor de Apps Script (Settings > Script Properties):
->   - `RECIPIENT_EMAIL` = <pendiente>
->   - `OTRA_KEY` = <pendiente>
+> - Configurar propiedades en el editor de Apps Script DEV (Settings > Script Properties):
+>   - `RECIPIENT_EMAIL` = <valor de prueba>
+>   - `OTRA_KEY` = <valor de prueba>
 >
-> **Siguiente paso**: `/verificar-dev` para desplegar a DEV y validar.
+> **Siguiente paso**: `/verificar-dev` para validar codigo, autoverificar con el browser de Cursor, y guiar el checklist contigo.
 
-Si hay propiedades pendientes, **lista las claves** que el usuario debe configurar. Es la unica vez donde entra al editor — y solo a Settings, no a editar codigo.
+Si hay propiedades pendientes, **lista las claves** que el usuario debe configurar.
 
 ## Errores comunes y como manejarlos
 
-- **`git status` con cambios previos** → no committees por encima sin entender. Pregunta al usuario antes.
-- **`node --check` falla** → es bug en codigo recien escrito; lee el archivo, corrige, valida de nuevo.
+- **`npm run push:dev` falla con "Apps Script API not enabled"** → guia a `script.google.com/home/usersettings`.
+- **`node --check` falla** → corrige sintaxis antes de seguir.
 - **Plan ambiguo o vacio** → no inventes. Pausa y dile al usuario: "el plan no detalla X. ¿Cual es la decision?". Si es importante, actualiza el plan antes de seguir.
-- **Conflicto con commit previo del mismo milestone** → puede pasar si replanearon. Sigue, el commit nuevo se acumula. No fuerces rebase ni amend.
+- **`git status` muestra archivos rastreados que deberian ser gitignored** (`environments.json`, `docs/IDS.md`, `node_modules/`) → alerta al usuario, hay un fallo en `.gitignore`.
 
 ## Que NO hacer
 
-- No corras `npm run push:*`, `deploy:*`, `promote` ni `clasp push/deploy`. Eso es de `/verificar-dev` y `/promover-prod`.
+- **No commitees.** Ningun `git commit`, ni `git add` (excepto si necesitas inspeccionar `git status`). El commit es responsabilidad de `/promover-prod`.
+- **No hagas `git push` a GitHub.** Eso tambien es de `/promover-prod`.
+- No corras `npm run deploy:dev`, `deploy:prod`, `promote` ni `clasp deploy`. Eso es de `/verificar-dev` (final) y `/promover-prod`.
+- No abras el editor de Apps Script en esta skill — salvo recordarle al usuario que configure Script Properties al final.
 - No agregues "mejoras" fuera del plan (refactors, logging extra, manejo de errores para casos no previstos). Si crees que vale la pena, registralo como sugerencia en el cierre, no en el codigo.
-- No abras el editor de Apps Script en esta skill.
-- No commitees `environments.json`, `docs/IDS.md`, `node_modules/`, `.env*`, `*.local.*`. Si por algun motivo `git status` los muestra como rastreados, alerta al usuario — falla en gitignore.
-- No hagas `git push --force`. Si push normal falla, diagnostica.
-- No saltes `node --check`. Es la unica validacion local antes del deploy.
-- No marques `status: "executed"` si hubo errores no resueltos.
+- No saltes `node --check`. Es la unica validacion local antes del push a DEV.
+- No marques `status: "executed"` si hubo errores no resueltos o si `npm run push:dev` fallo.

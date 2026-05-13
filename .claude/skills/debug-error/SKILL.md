@@ -97,20 +97,18 @@ Segun categoria del error:
 
 Una vez confirmada la causa raiz:
 
-#### Si el bug esta en DEV (status = `verifying`)
+#### Si el bug esta en DEV (status = `executing` o `verifying`)
 
-1. Edita el archivo local con el fix.
+1. Edita el archivo local con el fix. **No commitees** — los cambios se quedan sin commitear (igual que en `/ejecutar-milestone` y `/verificar-dev`); todo se commitea junto en `/promover-prod`.
 2. Valida sintaxis: `node --check <archivo>`.
-3. Re-despliega a DEV:
+3. Re-sube a DEV (push raw, sin deployment):
 
    ```bash
    npm run push:dev
    ```
 
-   (Usa `push:dev` no `deploy:dev` — no necesitas crear deployment nuevo para iterar en DEV; solo lo necesitas cuando vayas a registrar el cambio definitivo. Si prefieres crear deployment cada iteracion, usa `deploy:dev`.)
-
 4. Pide al usuario re-ejecutar la funcion en el editor de DEV y confirmar.
-5. Si pasa: commitea el fix con mensaje `fix(<milestone>): <descripcion>` y dirige al usuario a retomar `/verificar-dev` (el checklist).
+5. Si pasa: dirige al usuario a retomar `/verificar-dev` para continuar el checklist. El fix queda como un cambio mas en el working directory; sera parte del commit unico que hace `/promover-prod`.
 
 #### Si el bug esta en PROD (status = `promoted` o `closed`)
 
@@ -144,10 +142,10 @@ Despues de cada fix exitoso, agrega una linea al final de `docs/milestones/<mile
 ```markdown
 ## Bugs encontrados y resueltos
 
-- **<YYYY-MM-DD>**: `<descripcion del bug>`. Causa: `<causa raiz>`. Fix: `<descripcion>` (commit `<hash>`).
+- **<YYYY-MM-DD>**: `<descripcion del bug>`. Causa: `<causa raiz>`. Fix: `<descripcion>` en `<archivo>`.
 ```
 
-Esto deja trazabilidad sin requerir un sistema separado de tickets.
+Esto deja trazabilidad sin requerir un sistema separado de tickets. La linea queda como parte del cambio sin commitear; viajara junto al commit del milestone en `/promover-prod`.
 
 ## Errores especificos y como atacarlos
 
