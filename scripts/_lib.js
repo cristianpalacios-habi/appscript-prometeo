@@ -67,8 +67,12 @@ function parseDescriptionFromArgs(args) {
 }
 
 function parseDeploymentIdFromOutput(stdout) {
-  const match = stdout.match(/-\s*(AKfyc[\w-]+)/);
-  return match ? match[1] : null;
+  // clasp 1.x:  "- AKfyc... @1."
+  // clasp 3.x:  "Deployed AKfyc..." (sin guion)
+  // Captura cualquier ocurrencia de un deploymentId tipo AKfyc... y devuelve la ultima
+  // (los scriptIds no usan ese prefijo, asi que no hay colision).
+  const matches = stdout.match(/AKfyc[\w-]+/g);
+  return matches && matches.length > 0 ? matches[matches.length - 1] : null;
 }
 
 module.exports = {

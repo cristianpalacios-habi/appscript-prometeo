@@ -44,6 +44,40 @@ API keys, tokens, credenciales: viven en `PropertiesService.getScriptProperties(
 
 **Nunca pegues una API key en un archivo .js / .gs.**
 
+#### Patron opcional: propiedad `AMBIENTE`
+
+El modelo Prometeo separa DEV y PROD por dos vias suficientes para la mayoria de proyectos:
+
+- Distintos proyectos en Apps Script (distintos `scriptId`).
+- Distintos valores por ambiente en las propiedades del milestone (ej. `RECIPIENT_EMAIL=test@habi.co` en DEV vs `cliente@empresa.com` en PROD).
+
+**Por lo tanto, no es obligatorio** que cada proyecto tenga una propiedad `AMBIENTE`. Solo añadela cuando el milestone necesite branching explicito en codigo. Casos tipicos donde aporta:
+
+- Operaciones con efectos irreversibles (envios masivos, borrar datos, llamadas a APIs de pago) — quieres un guard `if (isDev()) { ... limitar alcance ... }`.
+- Logs y banners de inicio que digan en que ambiente se esta corriendo.
+- Feature flags temporales (codigo experimental que solo corre en DEV).
+- Validaciones extras costosas que no quieres en PROD.
+
+Cuando el plan lo amerite:
+
+1. Crear `AMBIENTE = dev` en Script Properties de DEV y `AMBIENTE = prod` en PROD (paso manual del usuario en Settings, igual que el resto de propiedades).
+2. Helpers en `Config.js`:
+
+   ```js
+   function getEnvironment() {
+     const env = PropertiesService.getScriptProperties().getProperty('AMBIENTE');
+     if (!env) throw new Error('Falta la propiedad AMBIENTE en Settings.');
+     return env; // 'dev' o 'prod'
+   }
+
+   function isDev()  { return getEnvironment() === 'dev'; }
+   function isProd() { return getEnvironment() === 'prod'; }
+   ```
+
+3. Si el plan del milestone añade esta propiedad, listala en su seccion `## Property Service`.
+
+Si el milestone es puro flujo de datos (leer hoja → procesar → escribir hoja) sin riesgo de efectos masivos, **no la agregues** — es ruido innecesario.
+
 ### 4. Codigo en archivos separados por responsabilidad
 
 No archivo gigante. Estructura sugerida:
