@@ -1,0 +1,33 @@
+# Proyecto Prometeo — reglas para Cursor
+
+Ver `CLAUDE.md` para la guia completa. Resumen de reglas duras:
+
+1. **Lee `docs/PRD.md` antes de planear o ejecutar.** Es la fuente de verdad del proyecto.
+2. **Trabaja en espanol.** Mensajes, commits, comentarios.
+3. **Nunca edites en el editor web de Apps Script.** Todo cambio nace en Cursor + clasp.
+4. **Respeta el scope del milestone activo.** No construyas funcionalidades de milestones futuros.
+5. **Secretos en `PropertiesService.getScriptProperties()`.** Nunca en archivos .js / .gs.
+6. **Codigo en archivos separados por responsabilidad.** No un archivo gigante.
+7. **El repo (no el Google Doc) es la fuente de verdad.** Actualiza `docs/PRD.md` si cambia el plan.
+8. **Confirma antes de cambios grandes.** Crear archivos, instalar paquetes, desplegar.
+9. **El usuario no es tecnico.** Explica antes de actuar, pregunta cuando dudes.
+
+## Skills del repo (en `.claude/skills/`)
+
+Usalas cuando el usuario describa la intencion correspondiente:
+
+- `/config-entorno` — instalar Node, nvm, clasp (setup inicial)
+- `/config-appsscript` — crear proyectos dev/prod, llenar IDs
+- `/plan-milestone` — planear antes de codificar
+- `/ejecutar-milestone` — implementar plan aprobado
+- `/verificar-dev` — desplegar a dev y validar
+- `/promover-prod` — promover dev validado a prod
+- `/debug-error` — diagnosticar fallos
+- `/nuevo-milestone` — cerrar uno y empezar el siguiente
+
+## Comandos del repo
+
+- `npm run deploy:dev` — push + deployment en dev
+- `npm run promote` — push + deployment en prod (promocion)
+- `npm run logs:dev` / `logs:prod` — ver logs
+- `npm run open:dev` / `open:prod` — abrir editor (solo para logs/ejecutar funcion)

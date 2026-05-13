@@ -1,207 +1,195 @@
-# Prometeo - Apps Script Starter
+# Prometeo — Plantilla de Apps Script
 
 > _Prometeo robo el fuego de los dioses y lo entrego a los mortales para que dejaran de depender de lo divino y crearan con sus propias manos._
->
-> — nombre del proyecto inspirado por Miguel Cruz
 
-Autor: Cristian Palacios.
+Plantilla del proyecto **Prometeo** (Habi / Inteligencia de Mercados): habilita a personas del equipo operativo —sin perfil tecnico— a construir, mantener y operar automatizaciones en Google Apps Script con ayuda de Cursor.
 
-## La chispa
-
-En muchos equipos, la automatizacion vive encerrada en las manos de unos pocos. Una hoja de calculo que necesita un bot, un formulario que deberia disparar un mensaje, un reporte que alguien arma a mano cada lunes... todos saben **que** se podria automatizar, pero el **como** parece reservado para quienes escriben codigo.
-
-Este repositorio es el fuego de Prometeo para tu equipo.
-
-No necesitas ser desarrollador. Si puedes editar una hoja de calculo, puedes crear una automatizacion. Este template te da la estructura, el flujo de deploy y las instrucciones para que cualquier persona con curiosidad pueda:
-
-- Conectar Google Sheets, Forms, Drive, Gmail o Calendar con unas pocas lineas.
-- Llamar APIs externas (Slack, ChatGPT, servicios internos) sin montar servidores.
-- Desplegar a desarrollo y produccion con un solo comando.
-- Trabajar con control de versiones como los equipos de ingenieria, sin necesitar ser uno.
-
-La idea es simple: **si el conocimiento esta disponible, las personas construyen.** Haz fork, configura tu Script ID y empieza a crear. El fuego ya es tuyo.
+**Autores**: Cristian Palacios, Miguel Cruz.
 
 ---
 
-## Arquitectura
+## ¿Que hace esta plantilla?
 
-```mermaid
-flowchart TB
-    subgraph LOCAL ["Tu maquina"]
-        CODE["Main.js\nUtils.js\nApi.js\n..."]
-        ENV["environments.json\n(dev / prod)"]
-        PUSH["scripts/push.js"]
-        CLASP[".clasp.json"]
-    end
+Te da el setup completo para que **conversando con Cursor en espanol** puedas:
 
-    subgraph DEPLOY ["Deploy"]
-        NPM(["npm run push:dev\nnpm run push:prod"])
-    end
+- Crear soluciones que lean/escriban en Sheets, Forms, Drive, Gmail o Calendar.
+- Llamar APIs externas (Slack, OpenAI, Gemini, servicios internos).
+- Trabajar con dos ambientes: **DEV** (pruebas) y **PROD** (operacion real).
+- Mantener historial de cambios con Git, sin necesidad de conocer Git.
+- Versionar despliegues con `clasp deploy` y trazabilidad de cada cambio en PROD.
 
-    subgraph GAS ["Google Apps Script"]
-        DEV["Proyecto DEV\n(scriptId dev)"]
-        PROD["Proyecto PROD\n(scriptId prod)"]
-    end
-
-    subgraph GOOGLE ["Servicios Google"]
-        SHEETS[("Sheets")]
-        FORMS[("Forms")]
-        DRIVE[("Drive")]
-        GMAIL[("Gmail")]
-        CALENDAR[("Calendar")]
-    end
-
-    subgraph EXTERNAL ["APIs externas"]
-        SLACK["Slack"]
-        AI["ChatGPT / Gemini"]
-        WEBHOOK["Webhooks"]
-        OTHER["Otros servicios"]
-    end
-
-    NPM -->|"1. Lee ambiente"| ENV
-    NPM -->|"2. Actualiza scriptId"| CLASP
-    NPM -->|"3. clasp push --force"| PUSH
-    PUSH -->|"Sube codigo"| DEV
-    PUSH -->|"Sube codigo"| PROD
-    CODE -.->|"Se incluye en el push"| PUSH
-
-    DEV & PROD -->|"OAuth scopes"| SHEETS & FORMS & DRIVE & GMAIL & CALENDAR
-    DEV & PROD -->|"UrlFetchApp"| SLACK & AI & WEBHOOK & OTHER
-```
-
-> El diagrama usa [Mermaid](https://mermaid.js.org/) y se renderiza automaticamente en GitHub.
+**No necesitas saber programar.** Necesitas saber que quieres lograr.
 
 ---
 
-## Requisitos previos
+## Como funciona — el workflow
 
-1. **Node.js** (v16 o superior)
-2. **clasp** instalado globalmente:
-   ```bash
-   npm install -g @google/clasp
+Cada proyecto Prometeo se construye en **milestones entregables**. Cada milestone pasa por un loop de 4 pasos, orquestados por **skills de Cursor** que invocas con un comando:
+
+```
+        ┌──────────┐    ┌───────────┐    ┌────────────┐    ┌──────────┐
+   ┌──> │  PLANEAR │ ──>│ EJECUTAR  │ ──>│ VERIFICAR  │ ──>│ PROMOVER │──┐
+   │    │ /plan-…  │    │ /ejecutar-│    │ /verificar-│    │/promover-│  │
+   │    └──────────┘    └───────────┘    └────────────┘    └──────────┘  │
+   │                                                                      │
+   └────────────── /nuevo-milestone (siguiente) ─────────────────────────-┘
+```
+
+Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
+
+---
+
+## Skills disponibles
+
+| Skill | Cuando | Que hace |
+| --- | --- | --- |
+| `/config-entorno` | 1 vez por computador | Instala Node 20 LTS, nvm, clasp, configura git |
+| `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
+| `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
+| `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run push:dev` (sin commit — cambios visibles en Source Control) |
+| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, deploy:dev |
+| `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
+| `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
+| `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
+
+Todas las skills viven en `.claude/skills/` y se invocan con `/<nombre>` en el chat de Cursor (Agent Mode).
+
+---
+
+## Pre-requisitos
+
+- **Cursor** instalado y logueado con SSO de Habi.
+- **PRD aprobado** del proyecto (Google Doc). Se copia a `docs/PRD.md` al inicio.
+- **macOS o Linux** (en Windows: usar WSL antes — ver Anexo A de la Guia Prometeo).
+- Permisos de administrador en el computador.
+- Acceso a la org Habi en GitHub.
+
+---
+
+## Setup inicial (primera vez)
+
+### Si es tu primera vez con Cursor en este computador
+
+Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PROMPT-INSTALACION.md)). Lo pegas en Cursor recien instalado y prepara todo: Git, GitHub CLI, autenticacion, crea tu repo desde la plantilla y lo abre. Despues, sigue con los pasos de abajo.
+
+### Si Cursor y el repo ya estan listos
+
+1. En el chat de Cursor (Agent Mode), corre:
+
    ```
-3. Iniciar sesion en clasp:
-   ```bash
-   clasp login
+   /config-entorno
    ```
 
-## Inicio rapido
+2. Cuando termine:
 
-### 1. Crear tu proyecto
+   ```
+   /config-appsscript
+   ```
 
-Haz fork de este repositorio o clonalo:
+3. Copia tu PRD aprobado al repo como `docs/PRD.md` (instrucciones en la seccion 2.3 de la Guia Prometeo).
 
-```bash
-git clone <url-de-tu-fork>
-cd <nombre-del-proyecto>
-```
+4. Empieza a construir:
 
-### 2. Crear el proyecto en Apps Script
+   ```
+   /plan-milestone
+   ```
 
-Ve a [script.google.com](https://script.google.com) y crea un nuevo proyecto (o usa uno existente). Copia el **Script ID** desde la URL o desde _Configuracion del proyecto > IDs_.
+---
 
-### 3. Configurar environments.json
+## Ambientes y ramas
 
-Copia el archivo de ejemplo y rellena tus Script IDs reales:
+**Apps Script** (donde corre el codigo):
 
-```bash
-cp environments.example.json environments.json
-```
+- **Local** (tu computador) — donde editas con Cursor.
+- **DEV** (Apps Script) — donde el codigo corre por primera vez. Aislado de operacion real.
+- **PROD** (Apps Script) — operacion real, con consecuencias reales.
 
-Luego edita `environments.json`:
+**GitHub** (donde se guarda el historial):
 
-```json
-{
-  "dev": {
-    "scriptId": "TU_SCRIPT_ID_DE_DESARROLLO"
-  },
-  "prod": {
-    "scriptId": "TU_SCRIPT_ID_DE_PRODUCCION"
-  }
-}
-```
+- Rama `main` — codigo actualmente en Apps Script PROD.
+- Rama `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
 
-> Si solo necesitas un ambiente, puedes poner el mismo ID en ambos.
-> `environments.json` esta en `.gitignore` para que tus IDs reales nunca se suban al repo.
-
-### 4. Configurar los scopes OAuth
-
-Edita `appsscript.json` y agrega solo los scopes que tu proyecto necesite:
-
-```json
-{
-  "oauthScopes": [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/script.external_request"
-  ]
-}
-```
-
-Scopes comunes:
-
-| Scope                          | Uso                                  |
-| ------------------------------ | ------------------------------------ |
-| `auth/spreadsheets`            | Leer/escribir Google Sheets          |
-| `auth/documents`               | Leer/escribir Google Docs            |
-| `auth/drive`                   | Acceso completo a Drive              |
-| `auth/drive.readonly`          | Acceso de solo lectura a Drive       |
-| `auth/forms`                   | Google Forms                         |
-| `auth/forms.currentonly`       | Formulario actual (triggers)         |
-| `auth/gmail.send`              | Enviar correos con Gmail             |
-| `auth/script.external_request` | Llamadas HTTP externas (UrlFetchApp) |
-| `auth/calendar`                | Google Calendar                      |
-
-## Comandos disponibles
-
-| Comando             | Descripcion                                   |
-| ------------------- | --------------------------------------------- |
-| `npm run push:dev`  | Sube el codigo al proyecto de **desarrollo**  |
-| `npm run push:prod` | Sube el codigo al proyecto de **produccion**  |
-| `npm run pull`      | Descarga el codigo del proyecto remoto        |
-| `npm run open`      | Abre el editor de Apps Script en el navegador |
-| `npm run logs`      | Muestra los logs del proyecto                 |
-
-## Estructura del proyecto
+**Flujo de cambios**:
 
 ```
-├── .clasp.json          # Config de clasp (scriptId, extensiones)
-├── .claspignore         # Archivos que clasp NO sube
-├── .gitignore           # Archivos ignorados por git
-├── appsscript.json      # Manifiesto de Apps Script (scopes, runtime)
-├── environments.example.json  # Plantilla de Script IDs (se commitea)
-├── environments.json          # Script IDs reales (en .gitignore)
-├── package.json         # Scripts npm
-├── Main.js              # Punto de entrada (tu codigo va aqui)
-├── scripts/
-│   └── push.js          # Script de deploy multi-ambiente
-└── README.md
+edicion local → npm run push:dev → Apps Script DEV → /promover-prod →
+  → 1 commit local → push a rama dev en GitHub → push a rama main en GitHub → npm run promote → Apps Script PROD
 ```
 
-## Como funciona el deploy
+**Toda edicion nace en local. No se edita en el editor web de Apps Script.** Durante el milestone los cambios NO se commitean — se acumulan visibles en el panel Source Control de Cursor para que los revises facil. `/promover-prod` hace el commit unico al final.
 
-El script `scripts/push.js` maneja el deploy a multiples ambientes:
+Ver detalle en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
-1. Lee el `scriptId` del ambiente solicitado desde `environments.json`
-2. Reemplaza temporalmente el `scriptId` en `.clasp.json`
-3. Ejecuta `clasp push --force`
-4. Restaura el `scriptId` original en `.clasp.json`
+---
 
-Esto permite tener un solo repositorio y hacer push a diferentes proyectos de Apps Script sin cambiar manualmente la configuracion.
+## Comandos npm (los corre la skill por ti)
 
-## Agregar archivos
+| Comando | Que hace |
+| --- | --- |
+| `npm run push:dev` | Sube codigo a DEV (sin crear deployment) |
+| `npm run push:prod` | Sube codigo a PROD (sin crear deployment, raro) |
+| `npm run deploy:dev` | Push + crea deployment en DEV, guarda `deploymentId` |
+| `npm run deploy:prod` | Push + crea deployment en PROD |
+| `npm run promote` | Push + deployment en PROD (promocion estandar desde DEV validado) |
+| `npm run open:dev` | Abre DEV en el navegador (solo para logs/ejecutar) |
+| `npm run open:prod` | Abre PROD en el navegador (solo para logs/ejecutar) |
+| `npm run logs:dev` | Logs de DEV |
+| `npm run logs:prod` | Logs de PROD |
 
-Todos los archivos `.js`, `.gs` y `.html` en la raiz del proyecto se suben automaticamente con `clasp push`. Solo agrega tus archivos en la raiz:
+Todos aceptan `-- --desc "..."` para personalizar la descripcion del deployment.
+
+---
+
+## Estructura del repo
 
 ```
-├── Main.js        # Tu logica principal
-├── Utils.js       # Funciones utilitarias
-├── Api.js         # Integraciones con APIs
-├── Sidebar.html   # HTML para sidebars/dialogs
-└── ...
+.
+├── .claude/skills/         # Skills de Cursor (configurar, planear, ejecutar, etc.)
+├── .planning/state.json    # Estado del proyecto (milestone activo, historial)
+├── docs/
+│   ├── PRD.md                  # PRD del proyecto (tu lo copias del Google Doc)
+│   ├── WORKFLOW.md             # Referencia visual del loop
+│   ├── PROMPT-INSTALACION.md   # Prompt maestro para bootstrap inicial del computador
+│   ├── IDS.md                  # IDs reales (gitignored, generado por config-appsscript)
+│   ├── IDS.example.md          # Plantilla de IDS.md
+│   └── milestones/             # Plan de cada milestone aprobado
+│       └── M1-plan.md
+├── scripts/                # Helpers de Node (push, deploy, promote, logs, open)
+├── appsscript.json         # Manifest de Apps Script (scopes, timezone)
+├── .clasp.json             # Config de clasp (scriptId placeholder)
+├── environments.json       # IDs reales por ambiente (gitignored)
+├── environments.example.json
+├── Main.js                 # Codigo de tu automatizacion (mas archivos por responsabilidad)
+├── .claspignore            # Que NO sube a Apps Script (docs, skills, secretos)
+├── .gitignore              # Que NO sube a GitHub
+├── CLAUDE.md               # Guia para asistentes de IA en este repo
+├── .cursorrules            # Reglas para Cursor
+└── package.json
 ```
 
-## Notas importantes
+---
 
-- **No subas credenciales al repo.** Usa `PropertiesService.getScriptProperties()` para almacenar API keys y secretos directamente en Apps Script.
-- El archivo `.clasprc.json` (credenciales locales de clasp) ya esta en `.gitignore`.
-- Si necesitas mas ambientes, agregalos en `environments.json` y crea el script correspondiente en `package.json`.
+## Seguridad y privacidad
+
+- **API keys y secretos** viven en `PropertiesService.getScriptProperties()`, nunca en codigo.
+- `environments.json` y `docs/IDS.md` estan **gitignored** — los IDs de tus proyectos nunca se suben a GitHub.
+- `.claspignore` bloquea que documentacion, skills, secretos o configs lleguen al editor de Apps Script. Solo sube `.js`/`.gs`/`.html` y `appsscript.json`.
+- Si alguien tiene acceso a tu repositorio, no puede deducir los IDs ni accesos de tus proyectos productivos.
+
+---
+
+## Soporte
+
+- **G-chat**: [prometeo-ayuda](https://chat.google.com/room/AAQAvHQfwAI?cls=7)
+- Office hours semanal con Cristian.
+- Ruta Platzi (fundamentos opcionales).
+
+---
+
+## Para mantenedores de la plantilla
+
+Cuando actualices skills o scripts:
+
+1. Cambia version en `package.json`.
+2. Documenta cambios en `CHANGELOG.md` (si lo creas).
+3. Notifica a usuarios activos.
