@@ -120,6 +120,7 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 | Promover a prod | `/promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
 | Diagnostico | `/debug-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
 | Cerrar milestone | `/nuevo-milestone` | Cierra activo + arranca siguiente |
+| Ajuste pequeno sobre PROD | `/quick-fix` | Plan inline + ejecutar + verificar (sin commit, sin promover). Solo aplica sobre milestones ya en PROD. |
 
 **Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.
 
@@ -128,6 +129,14 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 - `main` — codigo actualmente en Apps Script PROD.
 - `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
 - Trabajo local va sobre `main`. `/promover-prod` empuja a `dev` y luego a `main` en GitHub.
+
+**Versionado decimal** (mantenido en `.planning/state.json`):
+
+- Cada **milestone** promovido incrementa el major: M1→v1.0, M2→v2.0, M3→v3.0.
+- Cada **quick-fix** promovido incrementa el minor sobre el milestone vigente: v2.0→v2.1→v2.2...
+- El **tag git** y la **descripcion del deployment en PROD** usan la version: `v2.3`.
+- Los **commits**: `feat(M3): <obj>` para milestones, `fix(v2.4): <desc>` para quick-fixes.
+- Si el usuario te pregunta "en que version vamos?", lee `currentVersion` de `state.json`.
 
 Si el usuario describe una intencion que matchea con una skill, **invoca la skill** en vez de improvisar. Las skills aseguran consistencia entre proyectos Prometeo.
 

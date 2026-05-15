@@ -197,11 +197,12 @@ Resumen:
 
 ### 8. Marcar fin de ejecucion
 
-Actualiza `.planning/state.json`:
+Actualiza `.planning/state.json` (incluye marca de tipo de release pendiente para que `/promover-prod` versione correctamente):
 
 ```json
 {
   "status": "executed",
+  "pendingReleaseType": "milestone",
   "lastUpdated": "<ISO now>"
 }
 ```

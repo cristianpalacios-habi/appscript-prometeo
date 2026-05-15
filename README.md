@@ -51,6 +51,7 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 | `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
 | `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
 | `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
+| `/quick-fix` | Ajuste pequeno sobre algo ya en PROD | Plan inline + ejecutar + verificar; **no promueve** (te invita a correr `/promover-prod`). Versionado decimal: v2.0 → v2.1 |
 
 Todas las skills viven en `.claude/skills/` y se invocan con `/<nombre>` en el chat de Cursor (Agent Mode).
 

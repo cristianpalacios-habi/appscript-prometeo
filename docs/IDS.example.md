@@ -3,13 +3,19 @@
 > Este archivo es una **plantilla**. La skill `config-appsscript` genera `docs/IDS.md` (gitignored) con los IDs reales.
 > No commitees `docs/IDS.md` — contiene IDs de tus proyectos personales de Apps Script.
 
+## Version actual
+
+- **Version en PROD**: v<pendiente>   ← lee de `.planning/state.json` campo `currentVersion`
+- **Milestone activo**: <pendiente>
+- **Total promociones**: <n milestones + m fixes>
+
 ## Resumen
 
 | Recurso | DEV | PROD |
 | --- | --- | --- |
 | Script ID | `<pendiente>` | `<pendiente>` |
 | Deployment ID actual | `<pendiente>` | `<pendiente>` |
-| Descripcion del deploy | `<pendiente>` | `<pendiente>` |
+| Descripcion del deploy | `<pendiente>` | `<pendiente>` (incluye version) |
 | Ultima fecha de deploy | `<pendiente>` | `<pendiente>` |
 | Link al editor | `<pendiente>` | `<pendiente>` |
 

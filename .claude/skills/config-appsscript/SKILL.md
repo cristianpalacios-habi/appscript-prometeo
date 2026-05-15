@@ -253,7 +253,29 @@ git push -u origin main
 
 Si falla por permisos del remoto → "No tengo permisos de push en el remoto. Verifica que tienes acceso al repo en GitHub."
 
-### 10. Recordatorio sobre el PRD
+### 10. Inicializar estado del proyecto
+
+Crea `.planning/state.json` con valores iniciales si no existe (`/plan-milestone` lo creara si falta, pero hacerlo aqui asegura que los contadores de version arrancan limpios desde el setup):
+
+```bash
+mkdir -p .planning
+test -f .planning/state.json || cat > .planning/state.json <<'EOF'
+{
+  "currentVersion": "0.0",
+  "currentMilestoneNumber": 0,
+  "currentFixNumber": 0,
+  "activeMilestone": null,
+  "status": "not-started",
+  "pendingReleaseType": null,
+  "lastUpdated": "<ISO now>",
+  "history": []
+}
+EOF
+```
+
+Si `.planning/state.json` ya existe, no lo toques.
+
+### 12. Recordatorio sobre el PRD
 
 Verifica si existe `docs/PRD.md`:
 
@@ -265,7 +287,7 @@ Si no existe, recuerda al usuario:
 
 > No detecte `docs/PRD.md`. Antes de planear el primer milestone, copia tu PRD aprobado al repo siguiendo la seccion 2.3 de la [Guia Prometeo](https://chat.google.com/room/AAQAvHQfwAI?cls=7). Sin PRD, las skills `/plan-milestone` y `/ejecutar-milestone` no tienen contexto del proyecto.
 
-### 10. Cierre
+### 13. Cierre
 
 Resume al usuario:
 

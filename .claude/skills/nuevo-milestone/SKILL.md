@@ -138,12 +138,16 @@ Pregunta si hace push.
 
 ### 6. Cierre
 
+Lee `currentVersion` de state.json para mostrar el contexto:
+
 > Cambio de milestone listo.
 >
-> - Cerrado: **`<milestone anterior>`** (`<deployment_prod>`)
-> - Activo: **`<nuevo milestone>`** — `<titulo>`
+> - Cerrado: **`<milestone anterior>`** — version **v<X.Y>** en PROD
+> - Activo: **`<nuevo milestone>`** — `<titulo>` (sera **v<X+1>.0** cuando se promueva)
 >
 > Siguiente paso: `/plan-milestone` para arrancar la planeacion del nuevo milestone.
+>
+> Si en algun momento necesitas hacer un ajuste pequeno sobre lo que ya esta en PROD sin meterlo a este milestone, recuerda que `/quick-fix` esta disponible (sera v<X>.<Y+1>).
 
 ## Errores comunes
 

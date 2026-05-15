@@ -150,6 +150,41 @@ Orden estricto:
 
 ---
 
+## Quick-fix: ajustes pequenos despues de promover
+
+Cuando ya tienes un milestone en PROD y necesitas hacer un cambio chico (cambiar destinatario, corregir typo, ajustar umbral), no tienes que pasar por el loop completo de 4 fases. Usa `/quick-fix`.
+
+### Que hace `/quick-fix`
+
+1. Te pide la descripcion del cambio en 1-2 frases.
+2. Verifica que el cambio es lo suficientemente pequeno (sin scopes OAuth nuevos, sin Script Properties nuevas, sin archivos nuevos, < 3 archivos modificados).
+3. Si NO es pequeno, aborta y te dirige a `/plan-milestone` (sera el siguiente milestone, v<X+1>.0).
+4. Si SI es pequeno: mini-plan inline → implementa → `npm run deploy:dev` → autoverificacion (Fase A + B de verificar).
+5. **Pausa explicita** mostrandote el diff. Tu revisas en Source Control de Cursor.
+6. Tu corres `/promover-prod` cuando confirmes.
+
+**No commitea, no promueve.** Misma logica que el resto del loop.
+
+### Versionado decimal
+
+```
+M1 promovido      → v1.0
+quick-fix 1       → v1.1
+quick-fix 2       → v1.2
+M2 promovido      → v2.0    (reset del minor)
+quick-fix sobre M2 → v2.1
+M3 promovido      → v3.0
+```
+
+- **Milestones**: incrementan el major (v1.0 → v2.0 → v3.0).
+- **Quick-fixes**: incrementan el minor sobre el milestone vigente.
+- **Tag git**: `v<major>.<minor>` (ej. `v2.3`).
+- **Commits**: `feat(M3): <obj>` o `fix(v2.4): <desc>`.
+
+La version actual vive en `.planning/state.json` (campo `currentVersion`) y se muestra en `docs/IDS.md`.
+
+---
+
 ## Cuando algo se rompe en PROD
 
 Si lo que se rompio ya estaba en PROD (no en el milestone que estas construyendo):

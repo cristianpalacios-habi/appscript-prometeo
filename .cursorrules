@@ -25,6 +25,7 @@ Usalas cuando el usuario describa la intencion correspondiente:
 - `/promover-prod` — promover dev validado a prod
 - `/debug-error` — diagnosticar fallos
 - `/nuevo-milestone` — cerrar uno y empezar el siguiente
+- `/quick-fix` — ajuste pequeno sobre algo ya en PROD (versionado decimal: v2.0 → v2.1)
 
 ## Comandos del repo
 
