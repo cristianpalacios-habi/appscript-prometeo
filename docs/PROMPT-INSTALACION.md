@@ -14,17 +14,17 @@ Despues de esto, el usuario corre `/p-config-entorno` y `/p-config-appsscript` (
 
 ---
 
-## Para el mantenedor de la plantilla — REEMPLAZAR antes de publicar
+## Configuracion actual del prompt
 
-El prompt usa estos placeholders. **Antes de compartir el prompt con un usuario, reemplaza los valores con los reales de tu organizacion:**
+El prompt ya esta configurado con los valores reales del proyecto Prometeo. Si en el futuro algo cambia (org distinta, canal de soporte distinto, etc.), el mantenedor debe actualizar estas referencias en este archivo:
 
-| Placeholder | Donde | Que poner |
+| Concepto | Valor actual | Donde aparece |
 | --- | --- | --- |
-| `<<<ORG_GITHUB>>>` | En "el usuario tiene acceso a la org..." y en `gh repo create` | Nombre real de la org de GitHub (ej: `habi-co` o `Habi`) |
-| `<<<TEMPLATE_REPO>>>` | En el comando `gh repo create --template` | Ruta completa del repo plantilla (ej: `habi-co/prometeo-appscript-template`) |
-| `<<<CANAL_AYUDA>>>` | En el cierre | URL del canal de soporte (G-chat: `https://chat.google.com/room/AAQAvHQfwAI?cls=7`) |
+| Org de GitHub | `cristianpalacios-habi` | Multiple referencias en el prompt: contexto, validacion de membership, instrucciones al usuario, cierre |
+| Repo plantilla | `cristianpalacios-habi/appscript-prometeo` | URL `https://github.com/<>` para "Use this template" + validacion en paso 7.2 |
+| Canal de ayuda | `https://chat.google.com/room/AAQAvHQfwAI?cls=7` | Reglas generales + cierre |
 
-Verifica que las rutas existan y que cualquier usuario con SSO de Habi pueda crear repos en la org.
+Verifica que cualquier usuario con SSO de Habi pueda crear repos en la org y acceder al canal de ayuda.
 
 ---
 
@@ -53,15 +53,15 @@ CONTEXTO IMPORTANTE
 - El usuario NO es tecnico. Habla siempre en espanol claro. Explica cada paso en una frase antes de ejecutarlo.
 - El usuario ya tiene Cursor instalado y autenticado con SSO de Habi.
 - Tiene permisos de administrador en su computador.
-- Tiene acceso a la org "<<<ORG_GITHUB>>>" en GitHub via SSO.
-- El repositorio plantilla del proyecto es "<<<TEMPLATE_REPO>>>".
+- Tiene acceso a la org "cristianpalacios-habi" en GitHub via SSO.
+- El repositorio plantilla del proyecto es "cristianpalacios-habi/appscript-prometeo".
 
 REGLAS GENERALES (CRITICAS)
 - Anuncia el plan completo al inicio y pide UNA confirmacion. No pidas confirmacion por cada subpaso de instalacion.
 - Reporta el progreso despues de cada PASO (no de cada comando).
 - Si un comando falla, captura el error completo, explicalo en espanol simple, y propon el siguiente paso. NO reintentes lo mismo dos veces sin avisar.
 - Antes de instalar algo, verifica si ya esta instalado. Si lo esta, salta a verificar la version y continua. Esta skill debe ser idempotente.
-- Si encuentras una situacion no contemplada aqui, detente y pide al usuario que pregunte en el canal de soporte: <<<CANAL_AYUDA>>>.
+- Si encuentras una situacion no contemplada aqui, detente y pide al usuario que pregunte en el canal de soporte: https://chat.google.com/room/AAQAvHQfwAI?cls=7.
 - NO uses sudo silenciosamente. Si un paso requiere sudo, AVISA al usuario antes y pidele que este atento a poner su contrasena en la terminal.
 
 PLAN QUE ANUNCIAS AL USUARIO AL INICIO
@@ -267,14 +267,14 @@ Verifica:
 
 Confirma que el usuario tiene acceso a la org:
 
-  gh api orgs/<<<ORG_GITHUB>>>/members/$(gh api user --jq .login) -i 2>&1 | head -1
+  gh api orgs/cristianpalacios-habi/members/$(gh api user --jq .login) -i 2>&1 | head -1
 
 - Si retorna 204: OK, es miembro.
 - Si retorna 404: el usuario NO es miembro de la org, o su autorizacion SSO no esta activa. Avisa:
 
-> Tu cuenta de GitHub no esta detectada como miembro de <<<ORG_GITHUB>>>. Posibles causas:
+> Tu cuenta de GitHub no esta detectada como miembro de cristianpalacios-habi. Posibles causas:
 > 1. No tienes acceso a la org (pide acceso en el canal de soporte).
-> 2. Tienes acceso pero no autorizaste SSO en este token. Ve a https://github.com/settings/tokens, encuentra el token de gh CLI, y autoriza SSO para <<<ORG_GITHUB>>>.
+> 2. Tienes acceso pero no autorizaste SSO en este token. Ve a https://github.com/settings/tokens, encuentra el token de gh CLI, y autoriza SSO para cristianpalacios-habi.
 
 Bloquea aqui hasta resolver.
 
@@ -290,10 +290,10 @@ Dile al usuario, copiando los pasos tal cual:
 
 > Vamos a crear tu repositorio personal a partir de la plantilla Prometeo. Sigue estos pasos en tu navegador:
 >
-> 1. Abre https://github.com/<<<TEMPLATE_REPO>>> en tu navegador.
+> 1. Abre https://github.com/cristianpalacios-habi/appscript-prometeo en tu navegador.
 > 2. En la esquina superior derecha, presiona el boton verde "Use this template" y elige "Create a new repository".
 > 3. En la pagina que aparece:
->    - Owner: selecciona "<<<ORG_GITHUB>>>" si te aparece en la lista. Si no aparece, deja tu usuario personal de GitHub.
+>    - Owner: selecciona "cristianpalacios-habi" si te aparece en la lista. Si no aparece, deja tu usuario personal de GitHub.
 >    - Repository name: usa el formato "prometeo-<descripcion-corta>" en minusculas con guiones. Ejemplo: "prometeo-auditoria-tickets" o "prometeo-radar-inventario".
 >    - Visibility: Private.
 >    - NO marques "Include all branches".
@@ -308,12 +308,12 @@ Cuando el usuario te de una URL, valida en orden:
 
 a) Formato. Debe ser https://github.com/<owner>/<repo> (con o sin ".git" al final, con o sin "/" al final). Si no calza, pidela de nuevo.
 
-b) NO debe ser la plantilla. Extrae <owner>/<repo> de la URL recibida y comparalo con "<<<TEMPLATE_REPO>>>". Si son iguales (case-insensitive), DETENTE y avisa al usuario:
+b) NO debe ser la plantilla. Extrae <owner>/<repo> de la URL recibida y comparalo con "cristianpalacios-habi/appscript-prometeo". Si son iguales (case-insensitive), DETENTE y avisa al usuario:
 
 > Esa es la URL del repo plantilla, no la del repo que acabas de crear. Esto pasa si no presionaste "Use this template" o si volviste atras. Por favor:
-> 1. Vuelve a abrir https://github.com/<<<TEMPLATE_REPO>>>
+> 1. Vuelve a abrir https://github.com/cristianpalacios-habi/appscript-prometeo
 > 2. Presiona "Use this template" → "Create a new repository".
-> 3. Mandame la URL del repo NUEVO (el nombre del repo debe ser distinto, y el "owner" arriba del repo debe ser tu usuario o "<<<ORG_GITHUB>>>", no el dueno de la plantilla).
+> 3. Mandame la URL del repo NUEVO (el nombre del repo debe ser distinto, y el "owner" arriba del repo debe ser tu usuario o "cristianpalacios-habi", no el dueno de la plantilla).
 
 Bloquea aqui hasta que el usuario mande una URL valida y distinta a la plantilla.
 
@@ -440,8 +440,8 @@ Resume al usuario:
 >
 > ✓ Sistema operativo: <SO>
 > ✓ Git: configurado como <nombre> <email>
-> ✓ GitHub CLI: autenticado y con acceso a <<<ORG_GITHUB>>>
-> ✓ Repositorio: <<<ORG_GITHUB>>>/<nombre-elegido> creado y abierto en Cursor
+> ✓ GitHub CLI: autenticado y con acceso a cristianpalacios-habi
+> ✓ Repositorio: cristianpalacios-habi/<nombre-elegido> creado y abierto en Cursor
 > ✓ API de Apps Script: habilitada en tu cuenta de Google
 >
 > Siguientes pasos (las haces tu, ahora desde Cursor):
@@ -450,7 +450,7 @@ Resume al usuario:
 > 3. Copia tu PRD aprobado al archivo docs/PRD.md.
 > 4. Corre /p-planear-milestone para arrancar M1.
 >
-> Si algo falla, pregunta en el canal de soporte: <<<CANAL_AYUDA>>>.
+> Si algo falla, pregunta en el canal de soporte: https://chat.google.com/room/AAQAvHQfwAI?cls=7.
 
 FIN.
 ```

@@ -7,15 +7,15 @@ description: Actualiza la infraestructura del template (skills, CLAUDE.md, .curs
 
 Trae actualizaciones del template Prometeo al repo del usuario. **Solo toca infraestructura del template** (managed); el codigo de la automatizacion y los artefactos del proyecto (owned) quedan intactos.
 
-## Para el mantenedor del template — REEMPLAZAR
+## Configuracion del template
 
-Antes de publicar esta skill al template real, reemplaza el placeholder con la URL del repo plantilla:
+Esta skill apunta al repo plantilla oficial del proyecto Prometeo:
 
 ```
-<<<TEMPLATE_REPO_URL>>>  =  https://github.com/<<<ORG_GITHUB>>>/<<<TEMPLATE_REPO>>>.git
+https://github.com/cristianpalacios-habi/appscript-prometeo.git
 ```
 
-Ej: `https://github.com/habi-co/prometeo-appscript-template.git`.
+Si en el futuro el template se muda a otra URL (ej. una org oficial de Habi), el mantenedor debe actualizar las 3 referencias a esta URL en este archivo (`Pre-checks`, `Pasos detallados / 1. Configurar el remoto del template`, y este header).
 
 ## Cuando usar
 
@@ -50,7 +50,7 @@ test -f TEMPLATE_VERSION || echo "no-version"
 Verifica conectividad con el remoto:
 
 ```bash
-git ls-remote <<<TEMPLATE_REPO_URL>>> HEAD >/dev/null 2>&1
+git ls-remote https://github.com/cristianpalacios-habi/appscript-prometeo.git HEAD >/dev/null 2>&1
 ```
 
 Si falla → "No puedo conectar con el repo del template. Revisa tu internet y autenticacion de GitHub."
@@ -93,7 +93,7 @@ git remote get-url template 2>/dev/null
 Si no existe, agregarlo:
 
 ```bash
-git remote add template <<<TEMPLATE_REPO_URL>>>
+git remote add template https://github.com/cristianpalacios-habi/appscript-prometeo.git
 ```
 
 Fetch:
