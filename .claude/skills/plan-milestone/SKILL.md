@@ -210,14 +210,18 @@ Genera `docs/milestones/<milestone>-plan.md` con esta estructura:
 
 ## Artefactos a verificar (URLs)
 
-> URLs que el asistente abrira en el browser de Cursor durante `/verificar-dev`
-> para autoverificacion antes de pasarle el checklist al usuario.
+> URLs que `/verificar-dev` le pedira al usuario que abra durante la fase de
+> verificacion guiada, para inspeccionar outputs reales. El asistente NO los
+> abre por su cuenta — Apps Script no permite ejecutar funciones sin un
+> usuario autenticado, asi que el flujo es: asistente abre el editor de DEV,
+> usuario ejecuta funciones y abre los artefactos, asistente analiza lo que
+> el usuario reporta.
 
-- Editor de Apps Script DEV: `https://script.google.com/d/<DEV_SCRIPT_ID>/edit` (lo arma `/verificar-dev` desde environments.json)
-- Google Sheet de salida (si aplica): `<URL>`
-- Web App deployment (si aplica): `<URL>`
+- Editor de Apps Script DEV: `https://script.google.com/d/<DEV_SCRIPT_ID>/edit` (lo abre `/verificar-dev` con `npm run open:dev`)
+- Google Sheet de salida (si aplica): `<URL>` — el usuario lo abre y confirma valores en celdas / filas especificas
 - Carpeta de Drive de salida (si aplica): `<URL>`
-- Otros artefactos observables: `<descripcion + URL>`
+- Bandeja de correo del recipient (si aplica): el usuario revisa Gmail por correos con asunto `<X>`
+- Otros artefactos observables (Calendar, Forms, etc.): `<descripcion + URL>`
 
 ## Checklist de verificacion (para /verificar-dev)
 

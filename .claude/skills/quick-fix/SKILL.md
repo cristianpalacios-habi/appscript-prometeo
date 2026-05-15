@@ -148,30 +148,53 @@ npm run deploy:dev
 
 Si falla → diagnostica y muestra al usuario.
 
-### 7. Fase A — Revision estatica
+### 7. Fase A — Revision estatica (asistente solo)
 
 Mismo procedimiento que `/verificar-dev` Fase A, pero acotado al diff de los archivos modificados.
 
 Chequea:
 - ¿API keys o secretos hardcodeados? (no debe haber)
 - ¿Concuerda con el mini-plan?
-- ¿Sintaxis valida?
+- ¿Sintaxis valida (`node --check` por archivo modificado)?
 - ¿`appsscript.json` valido si lo tocaste?
+- ¿No introdujiste accidentalmente algo que saldria de los criterios de eligibilidad de quick-fix?
 
 Si falla → propone fix inline y vuelve a paso 5.
 
-### 8. Fase B — Autoverificacion con browser
+### 8. Fase B — Verificacion guiada con el usuario
 
-Mismo procedimiento que `/verificar-dev` Fase B.
+**Apps Script no permite ejecutar funciones sin un usuario autenticado.** El asistente abre el editor; el usuario ejecuta y reporta; el asistente analiza.
 
-- Abre el editor de DEV en el browser de Cursor.
-- Ejecuta la funcion afectada por el cambio.
-- Lee logs.
-- Si el cambio toca outputs observables (Sheet, correo), abre la URL e inspecciona.
+8.1 — Abre el editor:
 
-Si encuentra un problema → propone fix inline, vuelve a paso 5.
+```bash
+npm run open:dev
+```
 
-**Limite de fix loop**: maximo 3 intentos. Si despues de 3 intentos el problema persiste, aborta:
+8.2 — Identifica la funcion principal afectada por el cambio (suele ser obvio del mini-plan).
+
+8.3 — Pide al usuario:
+
+> Te abri el editor de DEV. Para confirmar que el cambio funciona:
+>
+> 1. Selecciona la funcion `<nombre>` en el dropdown de arriba.
+> 2. Pulsa Ejecutar.
+> 3. Copia todo el contenido del panel "Registro de ejecuciones" y pegamelo aqui.
+> 4. <Si el cambio toca outputs observables — un Sheet, un correo —> Tambien abre <URL> y dime que ves en <celda/fila>, o revisa tu bandeja en <recipient> por el correo con asunto `<X>`.
+
+8.4 — Cuando el usuario pega el log o reporta lo que ve, analizalo:
+
+- Busca errores rojos (`Exception`, stack traces).
+- Verifica que el cambio se refleja en el output (la celda con el nuevo valor, el correo con el destinatario nuevo, etc.).
+- Reporta veredicto al usuario:
+  > Veo el log. <observaciones>. Veredicto: pasa ✓ / falla ✗ porque `<razon>`.
+
+8.5 — Decision:
+
+- **Pasa**: ve al paso 9.
+- **Falla**: vuelve al paso 5 con el fix (sub-loop interno).
+
+**Limite del sub-loop**: maximo 3 intentos. Si despues de 3 intentos el problema persiste, aborta:
 
 > Llevo 3 intentos en este fix y el problema no se resuelve. Esto sugiere que el cambio es mas complejo de lo que se ve. Te recomiendo:
 > 1. Cancelar el quick-fix (los cambios quedan en el working dir, los puedes descartar con `git restore`).

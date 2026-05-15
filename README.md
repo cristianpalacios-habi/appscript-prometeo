@@ -47,7 +47,7 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 | `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
 | `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
 | `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run deploy:dev` (sube y actualiza el deployment estable de DEV — sin commit; cambios visibles en Source Control) |
-| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, marca el deployment de DEV como VALIDADO |
+| `/verificar-dev` | Por milestone | 4 fases: revision estatica del codigo + verificacion guiada contigo en el editor de Apps Script (tu ejecutas, el asistente analiza logs y outputs) + fix loop + marcar como VALIDADO |
 | `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
 | `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
 | `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |

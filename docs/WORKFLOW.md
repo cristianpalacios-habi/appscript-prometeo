@@ -95,13 +95,14 @@ Tu PRD parte el proyecto en milestones entregables. **Cada milestone pasa por el
 
 ### 3. Verificar en DEV — `/verificar-dev`
 
-**5 fases internas**:
+**4 fases internas**:
 
-- **A. Revision estatica** — el asistente lee el diff y lo contrasta contra CLAUDE.md, el plan, el PRD y buenas practicas de Apps Script.
-- **B. Autoverificacion** — el asistente abre el editor de DEV (y URLs relevantes: Sheets, Web App) en el **browser integrado de Cursor**, ejecuta la funcion principal, lee logs, inspecciona outputs.
-- **C. Fix loop** — si A o B detectan problemas, propone fix, lo implementa, hace `npm run deploy:dev` (mismo `deploymentId`) y reinicia.
-- **D. Checklist guiado al usuario** — recorre contigo cada item del checklist del plan. Si algo falla, vuelve a C.
-- **E. Marcar verificado** — `npm run deploy:dev` con descripcion "VALIDADO" (mismo `deploymentId` de siempre, solo actualiza metadata), sincroniza `docs/IDS.md`, marca state como `verified`.
+- **A. Revision estatica** — el asistente lee el diff y lo contrasta contra CLAUDE.md, el plan, el PRD y buenas practicas de Apps Script. Lo hace el asistente solo.
+- **B. Verificacion guiada contigo** — el asistente abre el editor de Apps Script DEV (`npm run open:dev`). Recorre **contigo** el checklist del plan, item por item: te dice que funcion ejecutar, tu la ejecutas en el editor, copias el log y se lo pegas; el asistente lo analiza y reporta veredicto. Cuando hay side-effects observables (Sheet de salida, correo a destinatario), te dice que URL abrir y que valor confirmar.
+- **C. Fix loop** — si A o B detectan problemas, propone fix, lo implementa, hace `npm run deploy:dev` (mismo `deploymentId`) y vuelve a B con el item afectado.
+- **D. Marcar verificado** — `npm run deploy:dev` con descripcion "VALIDADO" (mismo `deploymentId` de siempre, solo actualiza metadata), sincroniza `docs/IDS.md`, marca state como `verified`.
+
+**Por que no autoverificacion?** Apps Script no es una web app que se pueda previsualizar. Vive en `script.google.com` y ejecutar funciones requiere un usuario autenticado. El asistente NO puede apretar "Ejecutar" — siempre lo haces tu. El asistente si puede analizar logs que le pegues y diagnosticar lo que reportes.
 
 **Sigue sin commitear.** Cuando termina, los cambios siguen visibles en Source Control.
 

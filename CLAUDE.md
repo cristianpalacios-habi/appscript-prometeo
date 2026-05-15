@@ -116,7 +116,7 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 | Setup inicial | `/config-appsscript` | Crea proyectos DEV/PROD; crea rama `dev` en GitHub |
 | Planear milestone | `/plan-milestone` | Escribe plan + state.json (**sin commit**) |
 | Ejecutar plan | `/ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run deploy:dev` (reutiliza mismo `deploymentId`) |
-| Validar en dev | `/verificar-dev` | Itera fixes (**sin commit**) + `deploy:dev` mismo ID; al cerrar `deploy:dev` marca "VALIDADO" |
+| Validar en dev | `/verificar-dev` | Revision estatica + verificacion guiada con el usuario (asistente abre editor, usuario ejecuta, asistente analiza logs). Fix loop con `deploy:dev` mismo ID; al cerrar marca "VALIDADO" |
 | Promover a prod | `/promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
 | Diagnostico | `/debug-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
 | Cerrar milestone | `/nuevo-milestone` | Cierra activo + arranca siguiente |
@@ -158,6 +158,15 @@ Estos comandos usan `environments.json` (gitignored). El `scriptId` y `deploymen
 - `environments.json` — IDs reales (gitignored, gestionado por scripts)
 - `.claspignore` — define que sube a Apps Script (solo codigo `.js`/`.gs`/`.html`)
 - `.gitignore` — define que sube a GitHub (sin secretos, sin notas locales)
+
+## Division de roles en verificacion
+
+**Apps Script no es una web app que se pueda previsualizar.** Vive en `script.google.com` y ejecutar funciones requiere un usuario humano autenticado en su cuenta. Por eso, en `/verificar-dev` y `/quick-fix`:
+
+- **El asistente** hace lo que puede hacer solo: revision estatica de codigo (lee diffs vs PRD/plan/CLAUDE.md), analisis de logs que el usuario le pega, diagnostico de side-effects que el usuario describe, propuesta de fixes.
+- **El usuario** hace lo que requiere su autenticacion: ejecutar funciones en el editor de Apps Script, copiar logs y pegarlos al asistente, abrir Sheets de salida e inspeccionarlas, revisar su bandeja de Gmail por correos esperados.
+
+**NO intentes ejecutar funciones de Apps Script con herramientas de browser** (Claude in Chrome, Claude Preview, etc.). No funciona — siempre es el usuario. Tu rol es conductor + analista, no ejecutor.
 
 ## Antipatrones a evitar
 
