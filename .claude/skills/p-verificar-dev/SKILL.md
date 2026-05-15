@@ -1,11 +1,11 @@
 ---
-name: verificar-dev
+name: p-verificar-dev
 description: Valida el milestone implementado en 4 fases — revision estatica del codigo, verificacion guiada con el usuario en el editor de Apps Script (el usuario ejecuta, el asistente analiza logs y outputs), fix loop si encuentra problemas, y marcar como verificado. Itera con push a Apps Script DEV sin commits intermedios.
 ---
 
-# /verificar-dev
+# /p-verificar-dev
 
-Ejecuta la fase de **verificacion** del loop. **No commitea ni promueve** — solo valida y itera. Si todo pasa, marca el milestone como verificado y queda listo para `/promover-prod`.
+Ejecuta la fase de **verificacion** del loop. **No commitea ni promueve** — solo valida y itera. Si todo pasa, marca el milestone como verificado y queda listo para `/p-promover-prod`.
 
 ## Principio importante
 
@@ -18,7 +18,7 @@ El asistente NO intenta ejecutar funciones del editor por su cuenta. Cualquier i
 
 ## Cuando usar
 
-- Despues de `/ejecutar-milestone` (codigo en Apps Script DEV, cambios sin commitear).
+- Despues de `/p-ejecutar-milestone` (codigo en Apps Script DEV, cambios sin commitear).
 - El usuario dice: "validemos en dev", "verifica que funcione", "probemoslo", "revisemos".
 
 ## Las 4 fases
@@ -42,8 +42,8 @@ test -f environments.json
 Lee `.planning/state.json`. Casos:
 
 - **`status` ≠ `executed` y ≠ `verifying`** → segun valor:
-  - `planning` / `planned` → "El milestone no esta implementado. Corre `/ejecutar-milestone` primero."
-  - `executing` → "La implementacion no termino. Termina `/ejecutar-milestone`."
+  - `planning` / `planned` → "El milestone no esta implementado. Corre `/p-ejecutar-milestone` primero."
+  - `executing` → "La implementacion no termino. Termina `/p-ejecutar-milestone`."
   - `promoted` / `closed` → "Milestone cerrado. Para re-validar, replanea o trata como debug."
 - **`status` = `verifying`** → estamos retomando o iterando, eso es normal con esta skill.
 
@@ -58,9 +58,9 @@ Verifica `dev.scriptId` y el plan: `docs/milestones/<activeMilestone>-plan.md`.
 > 1. **Revision estatica** — leo el codigo recien escrito y lo contrasto contra el plan, el PRD y las reglas de CLAUDE.md. Lo hago yo solo.
 > 2. **Verificacion guiada contigo** — abro el editor de Apps Script DEV en tu navegador. Tu ejecutas las funciones y me pegas los logs; yo los analizo. Recorremos paso a paso el checklist del plan: para cada item te digo que hacer, tu lo haces, me reportas resultado.
 > 3. **Fix loop** — si la revision estatica encuentra algo, o tu reportas un fallo durante la verificacion, planeo el fix, lo implemento, subo a DEV y volvemos a verificar el item.
-> 4. **Marcar como verificado** — registro un deployment versionado en DEV (`deploy:dev VALIDADO`), sincronizo `docs/IDS.md`, dejo el milestone listo para `/promover-prod`.
+> 4. **Marcar como verificado** — registro un deployment versionado en DEV (`deploy:dev VALIDADO`), sincronizo `docs/IDS.md`, dejo el milestone listo para `/p-promover-prod`.
 >
-> **No commiteo nada en esta skill** — los cambios se acumulan y el commit se hace en `/promover-prod`.
+> **No commiteo nada en esta skill** — los cambios se acumulan y el commit se hace en `/p-promover-prod`.
 >
 > ¿Procedo?
 
@@ -139,7 +139,7 @@ Avisa al usuario:
 
 ### B.2 Recorrer el checklist item por item
 
-Lee el bloque `## Checklist de verificacion (para /verificar-dev)` del plan. Para cada item, sigue esta plantilla:
+Lee el bloque `## Checklist de verificacion (para /p-verificar-dev)` del plan. Para cada item, sigue esta plantilla:
 
 #### Item de ejecucion manual de funcion
 
@@ -226,7 +226,7 @@ Espera aprobacion.
 
 ### C.2 Implementar el fix
 
-Aplica los cambios. Misma logica que `/ejecutar-milestone`:
+Aplica los cambios. Misma logica que `/p-ejecutar-milestone`:
 - Edit/Write sobre los archivos.
 - `node --check` por archivo modificado.
 - Sin commits, sin push a GitHub.
@@ -315,7 +315,7 @@ Lee `environments.json` y reescribe `docs/IDS.md` (gitignored) con la tabla de I
 >
 > **Cambios sin commitear**: visibles en el panel Source Control de Cursor.
 >
-> Siguiente paso: `/promover-prod` cuando estes listo para mover este milestone a produccion (sera **v<X.0>**). Esa skill hace el commit unico, lo sube a GitHub (`dev` y `main`) y despliega a Apps Script PROD.
+> Siguiente paso: `/p-promover-prod` cuando estes listo para mover este milestone a produccion (sera **v<X.0>**). Esa skill hace el commit unico, lo sube a GitHub (`dev` y `main`) y despliega a Apps Script PROD.
 
 ## Errores comunes y como manejarlos
 
@@ -329,8 +329,8 @@ Lee `environments.json` y reescribe `docs/IDS.md` (gitignored) con la tabla de I
 ## Que NO hacer
 
 - **No intentes ejecutar funciones de Apps Script por tu cuenta** (con herramientas de browser o lo que sea). No funciona; siempre es el usuario.
-- **No commitees**. Esto es responsabilidad de `/promover-prod`.
-- **No hagas `git push` a GitHub.** Tambien de `/promover-prod`.
+- **No commitees**. Esto es responsabilidad de `/p-promover-prod`.
+- **No hagas `git push` a GitHub.** Tambien de `/p-promover-prod`.
 - **No despliegues a PROD ni corras `npm run promote`.** Esta skill solo toca DEV.
 - **No edites codigo en el editor web.** Si el usuario reporta que edito ahi, reorientalo: el cambio se hace en local y vuelve a `npm run deploy:dev`.
 - **No marques `status: "verified"` si algun item del checklist no paso.**

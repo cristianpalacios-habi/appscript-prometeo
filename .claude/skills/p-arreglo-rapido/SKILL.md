@@ -1,11 +1,11 @@
 ---
-name: quick-fix
-description: Ejecuta un cambio pequeno end-to-end (plan inline + ejecutar + verificar en DEV) y deja todo listo para que el usuario corra /promover-prod manualmente. Solo aplica sobre milestones ya promovidos a PROD. Aborta y redirige a /plan-milestone si detecta que el cambio es demasiado grande. Aplica versionado decimal: cada quick-fix promovido incrementa el minor (v2.3 -> v2.4).
+name: p-arreglo-rapido
+description: Ejecuta un cambio pequeno end-to-end (plan inline + ejecutar + verificar en DEV) y deja todo listo para que el usuario corra /p-promover-prod manualmente. Solo aplica sobre milestones ya promovidos a PROD. Aborta y redirige a /p-planear-milestone si detecta que el cambio es demasiado grande. Aplica versionado decimal: cada quick-fix promovido incrementa el minor (v2.3 -> v2.4).
 ---
 
-# /quick-fix
+# /p-arreglo-rapido
 
-Atajo del loop por milestone para **cambios pequenos** sobre algo que ya esta en PROD. Hace plan inline + ejecutar + verificar en una sola corrida, sin pausas entre fases. **Nunca promueve sola** — siempre termina pidiendo al usuario que corra `/promover-prod` explicitamente.
+Atajo del loop por milestone para **cambios pequenos** sobre algo que ya esta en PROD. Hace plan inline + ejecutar + verificar en una sola corrida, sin pausas entre fases. **Nunca promueve sola** — siempre termina pidiendo al usuario que corra `/p-promover-prod` explicitamente.
 
 ## Cuando usar
 
@@ -16,7 +16,7 @@ Casos validos:
 - Mover una constante hardcodeada a Script Properties.
 - Pequeno fix sobre operacion en PROD que no requiere debugging profundo.
 
-Casos NO validos (redirige a `/plan-milestone`):
+Casos NO validos (redirige a `/p-planear-milestone`):
 - Funcionalidad nueva.
 - Cambios que requieren un scope OAuth nuevo.
 - Cambios que requieren Script Properties nuevas.
@@ -27,7 +27,28 @@ Casos NO validos (redirige a `/plan-milestone`):
 
 Si el usuario describe algo que cae en "no validos", la skill aborta y le dice:
 
-> Lo que describes se ve como funcionalidad nueva, no como ajuste. Te recomiendo correr `/plan-milestone` para tratarlo como un milestone — sera **v<next_major>.0** en el historial.
+> Lo que describes se ve como funcionalidad nueva, no como ajuste. Te recomiendo correr `/p-planear-milestone` para tratarlo como un milestone — sera **v<next_major>.0** en el historial.
+
+## Auto-check ligero de version del template
+
+Antes de los pre-checks, ejecuta este check no bloqueante (1 vez por sesion):
+
+```bash
+if git remote get-url template >/dev/null 2>&1; then
+  git fetch template --quiet 2>/dev/null
+  LOCAL_VER=$(cat TEMPLATE_VERSION 2>/dev/null | tr -d '[:space:]')
+  REMOTE_VER=$(git show template/main:TEMPLATE_VERSION 2>/dev/null | tr -d '[:space:]')
+  if [ -n "$REMOTE_VER" ] && [ -n "$LOCAL_VER" ] && [ "$LOCAL_VER" != "$REMOTE_VER" ]; then
+    echo "AVISO_TEMPLATE: local=v$LOCAL_VER remoto=v$REMOTE_VER"
+  fi
+fi
+```
+
+Si detectas update disponible, avisa al usuario una sola vez al inicio (no interrumpas el flow):
+
+> 💡 Aviso: el template Prometeo tiene una version mas nueva disponible (v<remoto>; tu estas en v<local>). Considera correr `/p-actualizar-template` despues de promover este fix.
+
+Sigue con el flujo normal.
 
 ## Pre-checks (aborta si falla)
 
@@ -39,9 +60,9 @@ test -f environments.json
 Lee `.planning/state.json`. **Solo continua si**:
 
 - `currentMilestoneNumber >= 1` — debe haber al menos un milestone en PROD. Si vale 0:
-  > Aun no hay nada en PROD. /quick-fix solo aplica como ajuste sobre algo ya promovido. Empieza con `/plan-milestone` para construir M1.
+  > Aun no hay nada en PROD. /p-arreglo-rapido solo aplica como ajuste sobre algo ya promovido. Empieza con `/p-planear-milestone` para construir M1.
 - `status` ∈ {`promoted`, `closed`} — no permite quick-fix sobre un milestone en `verified` (debe promoverse o cancelarse primero). Si el status es otro:
-  > Hay un milestone activo en estado `<status>`. Termina `/promover-prod` o cancela antes de hacer un quick-fix.
+  > Hay un milestone activo en estado `<status>`. Termina `/p-promover-prod` o cancela antes de hacer un quick-fix.
 
 Verifica repo limpio:
 
@@ -51,7 +72,7 @@ git status --porcelain
 
 Si hay cambios → "Hay cambios sin commitear. Resuelvelos antes de un quick-fix."
 
-Lee `dev.scriptId`. Si no esta configurado → dirige a `/config-appsscript`.
+Lee `dev.scriptId`. Si no esta configurado → dirige a `/p-config-appsscript`.
 
 ## Plan que anuncias al usuario
 
@@ -63,7 +84,7 @@ Lee `dev.scriptId`. Si no esta configurado → dirige a `/config-appsscript`.
 > 4. Implemento el cambio.
 > 5. Subo a Apps Script DEV con `npm run deploy:dev` (mismo deploymentId, sin commit).
 > 6. Reviso el codigo y autoverificacion con browser de Cursor.
-> 7. **PAUSO** — te muestro el diff completo, te invito a revisarlo en Source Control de Cursor, y te paso la pelota para que tu corras `/promover-prod` cuando estes seguro.
+> 7. **PAUSO** — te muestro el diff completo, te invito a revisarlo en Source Control de Cursor, y te paso la pelota para que tu corras `/p-promover-prod` cuando estes seguro.
 >
 > La version que se va a asignar cuando promuevas sera: **v<current_major>.<current_minor + 1>**.
 >
@@ -94,7 +115,7 @@ Lee la descripcion del usuario y comparala con la base de codigo. Decide si enca
 >
 > Razon: <texto especifico, ej. "requiere un scope OAuth nuevo (Gmail.send) que el manifest no tiene">
 >
-> Te recomiendo correr **`/plan-milestone`** y tratarlo como un milestone (sera **v<next_major>.0**). El loop completo (plan + ejecutar + verificar + promover) te da las pausas necesarias para algo asi.
+> Te recomiendo correr **`/p-planear-milestone`** y tratarlo como un milestone (sera **v<next_major>.0**). El loop completo (plan + ejecutar + verificar + promover) te da las pausas necesarias para algo asi.
 >
 > Si crees que se puede achicar a un quick-fix valido, reformulalo. ¿Como prefieres seguir?
 
@@ -150,7 +171,7 @@ Si falla → diagnostica y muestra al usuario.
 
 ### 7. Fase A — Revision estatica (asistente solo)
 
-Mismo procedimiento que `/verificar-dev` Fase A, pero acotado al diff de los archivos modificados.
+Mismo procedimiento que `/p-verificar-dev` Fase A, pero acotado al diff de los archivos modificados.
 
 Chequea:
 - ¿API keys o secretos hardcodeados? (no debe haber)
@@ -198,7 +219,7 @@ npm run open:dev
 
 > Llevo 3 intentos en este fix y el problema no se resuelve. Esto sugiere que el cambio es mas complejo de lo que se ve. Te recomiendo:
 > 1. Cancelar el quick-fix (los cambios quedan en el working dir, los puedes descartar con `git restore`).
-> 2. Tratar el problema como milestone con `/plan-milestone`, o como debug serio con `/debug-error`.
+> 2. Tratar el problema como milestone con `/p-planear-milestone`, o como debug serio con `/p-diagnosticar-error`.
 
 ### 9. Escribir registro del fix
 
@@ -209,7 +230,7 @@ Crea `docs/fixes/v<X.Y>-fix.md` con esta estructura:
 ```markdown
 # Quick-fix v<X.Y>
 
-> Generado por `/quick-fix` el <YYYY-MM-DD HH:MM>. Pendiente de promover a PROD.
+> Generado por `/p-arreglo-rapido` el <YYYY-MM-DD HH:MM>. Pendiente de promover a PROD.
 
 ## Descripcion (del usuario)
 
@@ -241,7 +262,7 @@ Crea `docs/fixes/v<X.Y>-fix.md` con esta estructura:
 
 ## Promocion
 
-Pendiente. Cuando el usuario corra `/promover-prod`:
+Pendiente. Cuando el usuario corra `/p-promover-prod`:
 - Tag git: `v<X.Y>`
 - Commit: `fix(v<X.Y>): <descripcion corta>`
 - Deployment PROD con descripcion `v<X.Y> - <descripcion> - <fecha>`
@@ -261,7 +282,7 @@ Crea la carpeta `docs/fixes/` si no existe.
 }
 ```
 
-`/promover-prod` leera estos campos para hacer el versionado correcto.
+`/p-promover-prod` leera estos campos para hacer el versionado correcto.
 
 ### 11. Pausa muy explicita — fin de la skill
 
@@ -282,30 +303,30 @@ Crea la carpeta `docs/fixes/` si no existe.
 > Tu siguiente paso (manual):
 >
 > 1. **Revisa el diff completo** en el panel **Source Control** de Cursor (icono de rama en la barra lateral izquierda). Tomate el tiempo que necesites.
-> 2. Si todo se ve bien, **corre `/promover-prod`** en este chat.
+> 2. Si todo se ve bien, **corre `/p-promover-prod`** en este chat.
 > 3. Si algo se ve raro, dime que ajustar — entramos a otro fix loop — o cancela con `git restore .` para descartar los cambios.
 >
-> **No voy a invocar `/promover-prod` por ti.** El gatillo es tuyo. Asi te aseguras de que lo que esta a punto de tocar PROD lo viste con tus propios ojos.
+> **No voy a invocar `/p-promover-prod` por ti.** El gatillo es tuyo. Asi te aseguras de que lo que esta a punto de tocar PROD lo viste con tus propios ojos.
 
 Termina la skill aqui. **No promuevas. No commitees.**
 
 ## Errores comunes y como manejarlos
 
-- **Usuario invoca `/quick-fix` sin nada en PROD** → pre-check aborta. Dirige a `/plan-milestone`.
+- **Usuario invoca `/p-arreglo-rapido` sin nada en PROD** → pre-check aborta. Dirige a `/p-planear-milestone`.
 - **Cambio se ve trivial pero al implementar resulta que necesita un scope nuevo** → en paso 7 (Fase A) lo detectas. Abortas:
-  > Al implementar descubri que necesitamos el scope OAuth `<scope>` que el manifest no tiene. Eso lo saca de quick-fix. Voy a revertir los cambios y te recomiendo `/plan-milestone` para tratarlo como milestone. Confirma para revertir.
+  > Al implementar descubri que necesitamos el scope OAuth `<scope>` que el manifest no tiene. Eso lo saca de quick-fix. Voy a revertir los cambios y te recomiendo `/p-planear-milestone` para tratarlo como milestone. Confirma para revertir.
   Si confirma:
   ```bash
   git restore .
   ```
-- **Usuario olvida correr `/promover-prod` y desaparece** → no hay problema. Los cambios siguen en working dir, listos. La proxima vez que vuelva los puede revisar o descartar.
+- **Usuario olvida correr `/p-promover-prod` y desaparece** → no hay problema. Los cambios siguen en working dir, listos. La proxima vez que vuelva los puede revisar o descartar.
 - **Usuario quiere modificar el quick-fix despues de la pausa** → vuelve al paso 3 con la nueva instruccion. Re-deploy a DEV. Re-verifica. Sustituye el archivo `docs/fixes/v<X.Y>-fix.md` con la version final.
 
 ## Que NO hacer
 
-- **No promuevas.** /quick-fix termina antes de PROD. Siempre.
-- **No commitees.** El commit lo hace `/promover-prod`.
-- **No fuerces eligibilidad.** Si el cambio se sale de los criterios, redirige a `/plan-milestone`. Mejor escalar que romper PROD.
+- **No promuevas.** /p-arreglo-rapido termina antes de PROD. Siempre.
+- **No commitees.** El commit lo hace `/p-promover-prod`.
+- **No fuerces eligibilidad.** Si el cambio se sale de los criterios, redirige a `/p-planear-milestone`. Mejor escalar que romper PROD.
 - **No saltes Fase A o B.** Aunque sea pequeno, autoverifica. Es lo que justifica la skill.
-- **No marques `status: "promoted"`.** Esa transicion la hace solo `/promover-prod`.
+- **No marques `status: "promoted"`.** Esa transicion la hace solo `/p-promover-prod`.
 - **No reutilices la misma version** si el usuario decide hacer dos quick-fixes seguidos sin promover el primero. Verifica al inicio que `pendingReleaseType` no este seteado; si lo esta, dile al usuario que termine el ciclo actual antes.

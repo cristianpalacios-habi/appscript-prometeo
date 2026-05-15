@@ -1,17 +1,17 @@
 ---
-name: plan-milestone
+name: p-planear-milestone
 description: Planea el milestone activo del PRD antes de escribir codigo. Lee el PRD, identifica el milestone, propone un plan paso a paso con archivos, funciones y triggers. Alerta si algo se sale del scope. Produce docs/milestones/<milestone>-plan.md como artefacto.
 ---
 
-# /plan-milestone
+# /p-planear-milestone
 
 Guia la fase de **planeacion** del loop por milestone. **No escribe codigo de producto**. Solo conversa, propone y genera un archivo de plan.
 
 ## Cuando usar
 
-- Empezar un milestone nuevo (despues de `/config-appsscript` o `/nuevo-milestone`).
+- Empezar un milestone nuevo (despues de `/p-config-appsscript` o `/p-nuevo-milestone`).
 - El usuario dice: "vamos a planear M1", "quiero arrancar el siguiente milestone", "planeemos antes de codificar".
-- Antes de invocar `/ejecutar-milestone`.
+- Antes de invocar `/p-ejecutar-milestone`.
 
 ## Recordatorio para el usuario al inicio
 
@@ -25,7 +25,28 @@ Guia la fase de **planeacion** del loop por milestone. **No escribe codigo de pr
 2. Actualizar `.planning/state.json` con el milestone activo y status.
 3. Escribir `docs/milestones/<milestone>-plan.md` al final, una vez el usuario aprueba el plan.
 
-Si el usuario te pide "ya implementa esto", reorientalo: "primero cerremos el plan; despues con `/ejecutar-milestone` lo construyo".
+Si el usuario te pide "ya implementa esto", reorientalo: "primero cerremos el plan; despues con `/p-ejecutar-milestone` lo construyo".
+
+## Auto-check ligero de version del template
+
+Antes de los pre-checks, ejecuta este check no bloqueante (1 vez por sesion):
+
+```bash
+if git remote get-url template >/dev/null 2>&1; then
+  git fetch template --quiet 2>/dev/null
+  LOCAL_VER=$(cat TEMPLATE_VERSION 2>/dev/null | tr -d '[:space:]')
+  REMOTE_VER=$(git show template/main:TEMPLATE_VERSION 2>/dev/null | tr -d '[:space:]')
+  if [ -n "$REMOTE_VER" ] && [ -n "$LOCAL_VER" ] && [ "$LOCAL_VER" != "$REMOTE_VER" ]; then
+    echo "AVISO_TEMPLATE: local=v$LOCAL_VER remoto=v$REMOTE_VER"
+  fi
+fi
+```
+
+Si el bash devuelve `AVISO_TEMPLATE`, avisale al usuario UNA SOLA VEZ al inicio (no interrumpas el flow):
+
+> 💡 Aviso: el template Prometeo tiene una version mas nueva disponible (v<remoto>; tu estas en v<local>). Cuando termines este milestone, considera correr `/p-actualizar-template` para traer las mejoras.
+
+Sigue con el flujo normal. Si `template` remoto no existe (usuario nunca lo configuro), no avisas nada — `/p-actualizar-template` lo configura la primera vez.
 
 ## Pre-checks
 
@@ -65,7 +86,7 @@ Lee `.planning/state.json` si existe. Schema esperado:
 - Crea `.planning/state.json` con el milestone elegido y `status: "planning"`.
 
 **Si existe pero `status` es `promoted` o `closed`:**
-- Avisa al usuario que el milestone activo ya esta cerrado y sugiere `/nuevo-milestone` para arrancar el siguiente.
+- Avisa al usuario que el milestone activo ya esta cerrado y sugiere `/p-nuevo-milestone` para arrancar el siguiente.
 
 **Si existe y `status` es `planned`, `executing` o posterior:**
 - Confirma con el usuario: "Hay un plan previo de `<milestone>` en estado `<status>`. ¿Replaneamos desde cero o reviso/ajusto el plan existente?".
@@ -156,8 +177,8 @@ Genera `docs/milestones/<milestone>-plan.md` con esta estructura:
 ```markdown
 # Plan — <milestone>: <titulo>
 
-> Generado por `/plan-milestone` el <YYYY-MM-DD>.
-> Aprobado por el usuario. Lee este archivo antes de ejecutar con `/ejecutar-milestone`.
+> Generado por `/p-planear-milestone` el <YYYY-MM-DD>.
+> Aprobado por el usuario. Lee este archivo antes de ejecutar con `/p-ejecutar-milestone`.
 
 ## Objetivo
 
@@ -210,20 +231,20 @@ Genera `docs/milestones/<milestone>-plan.md` con esta estructura:
 
 ## Artefactos a verificar (URLs)
 
-> URLs que `/verificar-dev` le pedira al usuario que abra durante la fase de
+> URLs que `/p-verificar-dev` le pedira al usuario que abra durante la fase de
 > verificacion guiada, para inspeccionar outputs reales. El asistente NO los
 > abre por su cuenta — Apps Script no permite ejecutar funciones sin un
 > usuario autenticado, asi que el flujo es: asistente abre el editor de DEV,
 > usuario ejecuta funciones y abre los artefactos, asistente analiza lo que
 > el usuario reporta.
 
-- Editor de Apps Script DEV: `https://script.google.com/d/<DEV_SCRIPT_ID>/edit` (lo abre `/verificar-dev` con `npm run open:dev`)
+- Editor de Apps Script DEV: `https://script.google.com/d/<DEV_SCRIPT_ID>/edit` (lo abre `/p-verificar-dev` con `npm run open:dev`)
 - Google Sheet de salida (si aplica): `<URL>` — el usuario lo abre y confirma valores en celdas / filas especificas
 - Carpeta de Drive de salida (si aplica): `<URL>`
 - Bandeja de correo del recipient (si aplica): el usuario revisa Gmail por correos con asunto `<X>`
 - Otros artefactos observables (Calendar, Forms, etc.): `<descripcion + URL>`
 
-## Checklist de verificacion (para /verificar-dev)
+## Checklist de verificacion (para /p-verificar-dev)
 
 - [ ] La funcion `<nombre>` corre sin errores en DEV
 - [ ] El correo llega al destinatario configurado
@@ -241,7 +262,7 @@ Despues:
 
 > Plan listo. Esta en `docs/milestones/<milestone>-plan.md`.
 >
-> Siguiente paso: `/ejecutar-milestone` para implementar.
+> Siguiente paso: `/p-ejecutar-milestone` para implementar.
 
 ## Errores comunes y como manejarlos
 

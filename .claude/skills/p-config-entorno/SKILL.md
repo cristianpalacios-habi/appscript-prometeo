@@ -1,9 +1,9 @@
 ---
-name: config-entorno
+name: p-config-entorno
 description: Configura el entorno de desarrollo local para un proyecto Prometeo (nvm, Node 20 LTS, clasp, git, autenticacion). Una sola vez por computador. Solo soporta macOS y Linux nativos.
 ---
 
-# /config-entorno
+# /p-config-entorno
 
 Configura el entorno local para que el usuario pueda construir automatizaciones de Apps Script. **Una sola vez por computador.** Si vuelves a invocar la skill, debe ser idempotente: detecta lo que ya esta instalado y solo instala lo que falte.
 
@@ -182,7 +182,7 @@ Resume al usuario en un mensaje:
 > - git: configurado como `<nombre> <email>`
 > - clasp: autenticado
 >
-> Siguiente paso: corre `/config-appsscript` para crear tus proyectos de Apps Script (dev y prod) y vincularlos al repo.
+> Siguiente paso: corre `/p-config-appsscript` para crear tus proyectos de Apps Script (dev y prod) y vincularlos al repo.
 
 ## Errores comunes y como resolverlos
 

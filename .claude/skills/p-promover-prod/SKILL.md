@@ -1,9 +1,9 @@
 ---
-name: promover-prod
+name: p-promover-prod
 description: Cierra el milestone verificado o quick-fix listo. Hace UN solo commit con todos los cambios acumulados, lo sube a las ramas dev y main en GitHub en ese orden, y por ultimo despliega a Apps Script PROD via npm run promote. Aplica versionado decimal (milestones = mayor, fixes = menor) en commit, tag y deployment. Cierra el release en el estado del proyecto.
 ---
 
-# /promover-prod
+# /p-promover-prod
 
 Cierra el release validado (milestone o quick-fix). Es la unica skill del loop que **commitea**, **sube a GitHub** y **toca PROD**. Lo hace en este orden exacto:
 
@@ -18,8 +18,8 @@ Cierra el release validado (milestone o quick-fix). Es la unica skill del loop q
 
 ## Cuando usar
 
-- Despues de `/verificar-dev` con `status: "verified"` (release tipo `milestone`).
-- Despues de `/quick-fix` con `status: "fix-verified"` (release tipo `fix`).
+- Despues de `/p-verificar-dev` con `status: "verified"` (release tipo `milestone`).
+- Despues de `/p-arreglo-rapido` con `status: "fix-verified"` (release tipo `fix`).
 - El usuario dice: "promueve a prod", "vamos a produccion", "saquemoslo a prod".
 
 ## Versionado decimal — modelo
@@ -50,10 +50,10 @@ Lee `.planning/state.json`. Casos validos:
 
 Casos invalidos:
 
-- `planning` / `planned` / `executing` → "El release no esta validado. Corre `/ejecutar-milestone` y luego `/verificar-dev`."
-- `verifying` → "La verificacion no termino. Termina con `/verificar-dev`."
-- `quick-fixing` → "El quick-fix no termino. Vuelve a `/quick-fix`."
-- `promoted` / `closed` → "Ya esta promovido. ¿Avanzar con `/nuevo-milestone`?"
+- `planning` / `planned` / `executing` → "El release no esta validado. Corre `/p-ejecutar-milestone` y luego `/p-verificar-dev`."
+- `verifying` → "La verificacion no termino. Termina con `/p-verificar-dev`."
+- `quick-fixing` → "El quick-fix no termino. Vuelve a `/p-arreglo-rapido`."
+- `promoted` / `closed` → "Ya esta promovido. ¿Avanzar con `/p-nuevo-milestone`?"
 - `failedChecks` no vacio → "Hay items del checklist sin pasar: <lista>. No promuevo hasta resolver."
 
 Lee `environments.json`:
@@ -69,7 +69,7 @@ Verifica que hay cambios pendientes para commitear (es lo esperado):
 git status --porcelain
 ```
 
-- Si vacio → "No hay cambios para promover. ¿Olvidaste `/ejecutar-milestone` o ya promoviste este milestone?"
+- Si vacio → "No hay cambios para promover. ¿Olvidaste `/p-ejecutar-milestone` o ya promoviste este milestone?"
 - Si hay cambios → ok, sigue.
 
 Verifica que estamos en la rama `main` local:
@@ -87,7 +87,7 @@ git ls-remote --heads origin dev main
 ```
 
 - Si falta `dev` remota → la skill la crea en el paso 3 (no es error).
-- Si falta `main` remota → "El repo no tiene rama `main` en GitHub. Revisa `/config-appsscript` o crea manualmente con `git push -u origin main`."
+- Si falta `main` remota → "El repo no tiene rama `main` en GitHub. Revisa `/p-config-appsscript` o crea manualmente con `git push -u origin main`."
 
 ## Plan que anuncias al usuario
 
@@ -313,7 +313,7 @@ Confirma con el usuario que ve el nuevo deploymentId.
 npm run open:prod
 ```
 
-Guia al usuario igual que `/verificar-dev` Fase D. Si arranca sin error: pasa. Si falla:
+Guia al usuario igual que `/p-verificar-dev` Fase D. Si arranca sin error: pasa. Si falla:
 
 ```json
 { "status": "promoted-but-broken", "lastUpdated": "<ISO now>" }
@@ -323,7 +323,7 @@ Aviso:
 
 > Smoke test en PROD fallo. Esto es serio: PROD ya tiene el codigo desplegado pero no funciona. Acciones:
 > 1. Si es propiedad faltante, configurala (paso 1) y reintenta.
-> 2. Si es bug en codigo, vuelve a `/debug-error` — el fix arranca un nuevo mini-milestone.
+> 2. Si es bug en codigo, vuelve a `/p-diagnosticar-error` — el fix arranca un nuevo mini-milestone.
 > 3. No desinstales triggers ni asumas que prod esta operando.
 
 ### 7. Crear tag de git
@@ -443,7 +443,7 @@ git push origin main:dev
 > - Avisar al equipo / stakeholders.
 > - Si era el ultimo milestone: medir el KPI definido en el PRD y comparar con la meta.
 >
-> Si hay mas milestones pendientes, corre `/nuevo-milestone` para arrancar el siguiente.
+> Si hay mas milestones pendientes, corre `/p-nuevo-milestone` para arrancar el siguiente.
 
 ## Errores comunes y como manejarlos
 
@@ -456,7 +456,7 @@ git push origin main:dev
 ## Que NO hacer
 
 - No promuevas sin `status: "verified"` previo.
-- No edites codigo en esta skill. Si hay que cambiar algo, vuelves a `/debug-error` o `/ejecutar-milestone`.
+- No edites codigo en esta skill. Si hay que cambiar algo, vuelves a `/p-diagnosticar-error` o `/p-ejecutar-milestone`.
 - No ejecutes funciones destructivas o masivas como "smoke test" en PROD sin advertir.
 - No hagas `git push --force` sin aprobacion explicita del usuario.
 - No hagas `git push --delete` de tags.

@@ -12,8 +12,11 @@ credentials/
 *.pem
 *.key
 
-# IDs reales del proyecto (se generan tras config-appsscript)
+# IDs reales del proyecto (se generan tras p-config-appsscript)
 docs/IDS.md
+
+# Backups locales generados por /p-actualizar-template
+.template-backup/
 
 # Notas y borradores locales (no se suben al repo)
 *.local.md

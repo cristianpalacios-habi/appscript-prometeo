@@ -1,15 +1,15 @@
 ---
-name: debug-error
+name: p-diagnosticar-error
 description: Diagnostica y arregla errores en codigo de Apps Script siguiendo metodo cientifico simple. Lee logs del ambiente correcto, propone hipotesis, aplica fix en local, re-despliega a DEV. Si el bug esta en PROD, lo trata como mini-milestone de emergencia (fix en dev primero, nunca editar prod directo).
 ---
 
-# /debug-error
+# /p-diagnosticar-error
 
 Diagnostica fallos y los arregla manteniendo el flujo correcto (local → dev → prod). **Nunca edita codigo en el editor web.** Nunca toca prod directamente, ni siquiera para "un fix rapidito".
 
 ## Cuando usar
 
-- Una funcion fallo en DEV durante `/verificar-dev`.
+- Una funcion fallo en DEV durante `/p-verificar-dev`.
 - Un trigger en PROD se rompio o produjo resultados incorrectos.
 - El usuario dice: "esto no funciona", "fallo", "me sale este error", "el resultado no es el que espero".
 
@@ -99,7 +99,7 @@ Una vez confirmada la causa raiz:
 
 #### Si el bug esta en DEV (status = `executing` o `verifying`)
 
-1. Edita el archivo local con el fix. **No commitees** — los cambios se quedan sin commitear (igual que en `/ejecutar-milestone` y `/verificar-dev`); todo se commitea junto en `/promover-prod`.
+1. Edita el archivo local con el fix. **No commitees** — los cambios se quedan sin commitear (igual que en `/p-ejecutar-milestone` y `/p-verificar-dev`); todo se commitea junto en `/p-promover-prod`.
 2. Valida sintaxis: `node --check <archivo>`.
 3. Re-sube a DEV reutilizando el mismo deployment:
 
@@ -110,7 +110,7 @@ Una vez confirmada la causa raiz:
    Esto actualiza el deployment estable de DEV (mismo `deploymentId`, mismo URL) con el codigo del fix. El humano refresca su pestana de DEV y ve el codigo nuevo.
 
 4. Pide al usuario re-ejecutar la funcion en el editor de DEV y confirmar.
-5. Si pasa: dirige al usuario a retomar `/verificar-dev` para continuar el checklist. El fix queda como un cambio mas en el working directory; sera parte del commit unico que hace `/promover-prod`.
+5. Si pasa: dirige al usuario a retomar `/p-verificar-dev` para continuar el checklist. El fix queda como un cambio mas en el working directory; sera parte del commit unico que hace `/p-promover-prod`.
 
 #### Si el bug esta en PROD (status = `promoted` o `closed`)
 
@@ -121,7 +121,7 @@ Una vez confirmada la causa raiz:
 > 1. Reproduzco el error en DEV primero (push del codigo actual a DEV, ejecutar, confirmar mismo error).
 > 2. Aplico el fix en local.
 > 3. Despliego a DEV y verifico.
-> 4. Promuevo a PROD con `/promover-prod`.
+> 4. Promuevo a PROD con `/p-promover-prod`.
 >
 > **No edito PROD directamente bajo ninguna circunstancia.** Aunque el editor web te permita, hacerlo crea divergencia entre GitHub y PROD que se rompe en el siguiente deploy.
 
@@ -135,7 +135,7 @@ Crea entrada temporal en state.json:
 }
 ```
 
-Sigue el flujo: `deploy:dev` (mismo deploymentId) → re-ejecutar en DEV → fix iterativo → commit → instruir al usuario a correr `/verificar-dev` y luego `/promover-prod`.
+Sigue el flujo: `deploy:dev` (mismo deploymentId) → re-ejecutar en DEV → fix iterativo → commit → instruir al usuario a correr `/p-verificar-dev` y luego `/p-promover-prod`.
 
 ### 5. Documentar
 
@@ -147,7 +147,7 @@ Despues de cada fix exitoso, agrega una linea al final de `docs/milestones/<mile
 - **<YYYY-MM-DD>**: `<descripcion del bug>`. Causa: `<causa raiz>`. Fix: `<descripcion>` en `<archivo>`.
 ```
 
-Esto deja trazabilidad sin requerir un sistema separado de tickets. La linea queda como parte del cambio sin commitear; viajara junto al commit del milestone en `/promover-prod`.
+Esto deja trazabilidad sin requerir un sistema separado de tickets. La linea queda como parte del cambio sin commitear; viajara junto al commit del milestone en `/p-promover-prod`.
 
 ## Errores especificos y como atacarlos
 
@@ -164,7 +164,7 @@ Esto deja trazabilidad sin requerir un sistema separado de tickets. La linea que
 ## Que NO hacer
 
 - No edites codigo en el editor de Apps Script. Ni para "ver el error mas claro", ni para "probar rapido".
-- No promuevas a PROD desde esta skill. Cuando el fix en DEV este validado, dirige a `/promover-prod`.
+- No promuevas a PROD desde esta skill. Cuando el fix en DEV este validado, dirige a `/p-promover-prod`.
 - No commitees fixes sin verificar en DEV primero.
 - No marques el bug como resuelto solo porque "deberia funcionar". Pide al usuario re-ejecutar y confirmar.
 - No intentes mas de 2 hipotesis sin pausa. Si dos hipotesis fallan, replantea el problema con el usuario — probablemente el modelo mental esta mal.

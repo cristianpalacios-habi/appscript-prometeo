@@ -17,15 +17,16 @@ Ver `CLAUDE.md` para la guia completa. Resumen de reglas duras:
 
 Usalas cuando el usuario describa la intencion correspondiente:
 
-- `/config-entorno` — instalar Node, nvm, clasp (setup inicial)
-- `/config-appsscript` — crear proyectos dev/prod, llenar IDs
-- `/plan-milestone` — planear antes de codificar
-- `/ejecutar-milestone` — implementar plan aprobado
-- `/verificar-dev` — desplegar a dev y validar
-- `/promover-prod` — promover dev validado a prod
-- `/debug-error` — diagnosticar fallos
-- `/nuevo-milestone` — cerrar uno y empezar el siguiente
-- `/quick-fix` — ajuste pequeno sobre algo ya en PROD (versionado decimal: v2.0 → v2.1)
+- `/p-config-entorno` — instalar Node, nvm, clasp (setup inicial)
+- `/p-config-appsscript` — crear proyectos dev/prod, llenar IDs
+- `/p-planear-milestone` — planear antes de codificar
+- `/p-ejecutar-milestone` — implementar plan aprobado
+- `/p-verificar-dev` — desplegar a dev y validar
+- `/p-promover-prod` — promover dev validado a prod
+- `/p-diagnosticar-error` — diagnosticar fallos
+- `/p-nuevo-milestone` — cerrar uno y empezar el siguiente
+- `/p-arreglo-rapido` — ajuste pequeno sobre algo ya en PROD (versionado decimal: v2.0 → v2.1)
+- `/p-actualizar-template` — trae actualizaciones del template original (skills, docs, scripts) sin tocar codigo del usuario
 
 ## Comandos del repo
 

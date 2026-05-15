@@ -112,23 +112,24 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 
 | Momento | Skill | Que hace con git / GitHub / Apps Script |
 | --- | --- | --- |
-| Setup inicial | `/config-entorno` | Instala Node, nvm, clasp (1 vez por computador) |
-| Setup inicial | `/config-appsscript` | Crea proyectos DEV/PROD; crea rama `dev` en GitHub |
-| Planear milestone | `/plan-milestone` | Escribe plan + state.json (**sin commit**) |
-| Ejecutar plan | `/ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run deploy:dev` (reutiliza mismo `deploymentId`) |
-| Validar en dev | `/verificar-dev` | Revision estatica + verificacion guiada con el usuario (asistente abre editor, usuario ejecuta, asistente analiza logs). Fix loop con `deploy:dev` mismo ID; al cerrar marca "VALIDADO" |
-| Promover a prod | `/promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
-| Diagnostico | `/debug-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
-| Cerrar milestone | `/nuevo-milestone` | Cierra activo + arranca siguiente |
-| Ajuste pequeno sobre PROD | `/quick-fix` | Plan inline + ejecutar + verificar (sin commit, sin promover). Solo aplica sobre milestones ya en PROD. |
+| Setup inicial | `/p-config-entorno` | Instala Node, nvm, clasp (1 vez por computador) |
+| Setup inicial | `/p-config-appsscript` | Crea proyectos DEV/PROD; crea rama `dev` en GitHub |
+| Planear milestone | `/p-planear-milestone` | Escribe plan + state.json (**sin commit**) |
+| Ejecutar plan | `/p-ejecutar-milestone` | Escribe codigo (**sin commit**) + `npm run deploy:dev` (reutiliza mismo `deploymentId`) |
+| Validar en dev | `/p-verificar-dev` | Revision estatica + verificacion guiada con el usuario (asistente abre editor, usuario ejecuta, asistente analiza logs). Fix loop con `deploy:dev` mismo ID; al cerrar marca "VALIDADO" |
+| Promover a prod | `/p-promover-prod` | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
+| Diagnostico | `/p-diagnosticar-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
+| Cerrar milestone | `/p-nuevo-milestone` | Cierra activo + arranca siguiente |
+| Ajuste pequeno sobre PROD | `/p-arreglo-rapido` | Plan inline + ejecutar + verificar (sin commit, sin promover). Solo aplica sobre milestones ya en PROD. |
+| Actualizar el template | `/p-actualizar-template` | Trae actualizaciones de skills + docs + scripts desde el repo plantilla. No toca codigo del usuario (Main.js, PRD, milestones). Backup automatico. |
 
-**Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.
+**Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/p-promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.
 
 **Ramas en GitHub**:
 
 - `main` — codigo actualmente en Apps Script PROD.
-- `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
-- Trabajo local va sobre `main`. `/promover-prod` empuja a `dev` y luego a `main` en GitHub.
+- `dev` — codigo actualmente validado en Apps Script DEV (creada por `/p-config-appsscript`).
+- Trabajo local va sobre `main`. `/p-promover-prod` empuja a `dev` y luego a `main` en GitHub.
 
 **Versionado decimal** (mantenido en `.planning/state.json`):
 
@@ -143,7 +144,7 @@ Si el usuario describe una intencion que matchea con una skill, **invoca la skil
 ## Comandos del repo (referencia)
 
 - `npm run push:dev` — sube codigo a dev sin tocar el deployment (uso raro, preferir `deploy:dev`)
-- `npm run deploy:dev` — push + actualiza el deployment estable de dev (mismo `deploymentId` siempre; el primero se crea en `/config-appsscript`)
+- `npm run deploy:dev` — push + actualiza el deployment estable de dev (mismo `deploymentId` siempre; el primero se crea en `/p-config-appsscript`)
 - `npm run promote` — promueve dev validado a prod (push + deploy en prod)
 - `npm run open:dev` / `open:prod` — abre el editor en el ambiente correcto
 - `npm run logs:dev` / `logs:prod` — muestra logs del ambiente
@@ -161,7 +162,7 @@ Estos comandos usan `environments.json` (gitignored). El `scriptId` y `deploymen
 
 ## Division de roles en verificacion
 
-**Apps Script no es una web app que se pueda previsualizar.** Vive en `script.google.com` y ejecutar funciones requiere un usuario humano autenticado en su cuenta. Por eso, en `/verificar-dev` y `/quick-fix`:
+**Apps Script no es una web app que se pueda previsualizar.** Vive en `script.google.com` y ejecutar funciones requiere un usuario humano autenticado en su cuenta. Por eso, en `/p-verificar-dev` y `/p-arreglo-rapido`:
 
 - **El asistente** hace lo que puede hacer solo: revision estatica de codigo (lee diffs vs PRD/plan/CLAUDE.md), analisis de logs que el usuario le pega, diagnostico de side-effects que el usuario describe, propuesta de fixes.
 - **El usuario** hace lo que requiere su autenticacion: ejecutar funciones en el editor de Apps Script, copiar logs y pegarlos al asistente, abrir Sheets de salida e inspeccionarlas, revisar su bandeja de Gmail por correos esperados.

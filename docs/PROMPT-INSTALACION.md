@@ -8,7 +8,7 @@ Este documento contiene el **prompt maestro** que el usuario pega en Cursor reci
 4. Crea su repositorio personal a partir de la **plantilla Prometeo** y lo clona.
 5. Abre el repo en Cursor.
 
-Despues de esto, el usuario corre `/config-entorno` y `/config-appsscript` (las skills del repo) para instalar Node, clasp, y crear sus proyectos de Apps Script.
+Despues de esto, el usuario corre `/p-config-entorno` y `/p-config-appsscript` (las skills del repo) para instalar Node, clasp, y crear sus proyectos de Apps Script.
 
 > **Nota:** este prompt NO instala Node, nvm, clasp ni crea proyectos de Apps Script. Esos pasos los hacen las skills del repo. Esto es solo el bootstrap minimo.
 
@@ -445,10 +445,10 @@ Resume al usuario:
 > ✓ API de Apps Script: habilitada en tu cuenta de Google
 >
 > Siguientes pasos (las haces tu, ahora desde Cursor):
-> 1. Corre la skill /config-entorno en el chat de Cursor (Agent Mode). Instala Node, nvm y clasp.
-> 2. Corre /config-appsscript. Crea tus proyectos DEV y PROD en Apps Script.
+> 1. Corre la skill /p-config-entorno en el chat de Cursor (Agent Mode). Instala Node, nvm y clasp.
+> 2. Corre /p-config-appsscript. Crea tus proyectos DEV y PROD en Apps Script.
 > 3. Copia tu PRD aprobado al archivo docs/PRD.md.
-> 4. Corre /plan-milestone para arrancar M1.
+> 4. Corre /p-planear-milestone para arrancar M1.
 >
 > Si algo falla, pregunta en el canal de soporte: <<<CANAL_AYUDA>>>.
 
@@ -462,10 +462,10 @@ FIN.
 
 ## Que NO hace este prompt (y por que)
 
-- **No instala Node, nvm ni clasp.** Es responsabilidad de `/config-entorno`, que vive en el repo. Mantener el bootstrap minimo permite iterar en `/config-entorno` sin tener que re-distribuir un prompt nuevo cada vez.
-- **No crea proyectos de Apps Script.** Es responsabilidad de `/config-appsscript`.
+- **No instala Node, nvm ni clasp.** Es responsabilidad de `/p-config-entorno`, que vive en el repo. Mantener el bootstrap minimo permite iterar en `/p-config-entorno` sin tener que re-distribuir un prompt nuevo cada vez.
+- **No crea proyectos de Apps Script.** Es responsabilidad de `/p-config-appsscript`.
 - **No copia el PRD al repo.** Es responsabilidad del usuario (instruccion en seccion 2.3 de la Guia Prometeo).
-- **No corre la skill `/config-entorno` automaticamente al final.** El usuario lo hace cuando esta listo — el prompt solo deja el repo abierto en Cursor.
+- **No corre la skill `/p-config-entorno` automaticamente al final.** El usuario lo hace cuando esta listo — el prompt solo deja el repo abierto en Cursor.
 
 ## Diferencias con el prompt original del Anexo A
 
@@ -483,8 +483,8 @@ FIN.
 | PASO 7 ahora crea el repo via UI de GitHub ("Use this template") + pega URL + clona, en vez de `gh repo create --template --clone` | Los usuarios estaban teniendo problemas con `gh repo create --template` (permisos de org, selector de owner ambiguo, etc.). La UI es mas confiable y visual para perfiles no-tecnicos |
 | Validacion explicita de que la URL pegada NO sea la del repo plantilla | Sin esto, si el usuario olvida presionar "Use this template" terminamos clonando la plantilla en vez del repo nuevo, y el siguiente milestone empieza sucio |
 | Sub-paso 7.3 pregunta y crea (si hace falta) la carpeta donde se guarda el repo | El flujo viejo clonaba en `~` (home), ensuciandolo. Usuarios no-tecnicos no tenian convencion de "carpeta de proyectos" |
-| Paso 10: habilitar Apps Script API | Necesario para `/config-appsscript`. Hacerlo aqui evita un viaje extra |
-| Cierre apunta a `/config-entorno` → `/config-appsscript` → `docs/PRD.md` → `/plan-milestone` | El original solo mencionaba la guia, sin ruta operativa |
+| Paso 10: habilitar Apps Script API | Necesario para `/p-config-appsscript`. Hacerlo aqui evita un viaje extra |
+| Cierre apunta a `/p-config-entorno` → `/p-config-appsscript` → `docs/PRD.md` → `/p-planear-milestone` | El original solo mencionaba la guia, sin ruta operativa |
 | Canal de soporte como placeholder | El original mezclaba Slack y G-chat |
 
 ## Testing del prompt

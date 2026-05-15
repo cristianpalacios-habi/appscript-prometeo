@@ -34,4 +34,4 @@
 ## Notas operativas
 
 - Nunca edites codigo en el editor web. Todos los cambios pasan por Cursor + clasp.
-- Si los IDs cambian, corre `/config-appsscript` para regenerar este archivo.
+- Si los IDs cambian, corre `/p-config-appsscript` para regenerar este archivo.

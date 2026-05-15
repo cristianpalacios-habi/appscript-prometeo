@@ -1,15 +1,15 @@
 ---
-name: nuevo-milestone
-description: Cierra el milestone activo (que ya fue promovido a PROD) y arranca el siguiente leyendo el PRD. Actualiza .planning/state.json con el cambio de milestone activo y agrega entrada al historial. Apunta al usuario a /plan-milestone.
+name: p-nuevo-milestone
+description: Cierra el milestone activo (que ya fue promovido a PROD) y arranca el siguiente leyendo el PRD. Actualiza .planning/state.json con el cambio de milestone activo y agrega entrada al historial. Apunta al usuario a /p-planear-milestone.
 ---
 
-# /nuevo-milestone
+# /p-nuevo-milestone
 
 Transicion entre milestones. **Cierra el activo y arranca el siguiente.** No replanea ni codifica — solo gestiona el estado del proyecto.
 
 ## Cuando usar
 
-- Despues de `/promover-prod` exitoso del milestone activo.
+- Despues de `/p-promover-prod` exitoso del milestone activo.
 - El usuario dice: "siguiente milestone", "cerremos este y vamos al proximo", "ya terminamos M1, sigue M2".
 
 ## Pre-checks (aborta si falla)
@@ -21,8 +21,8 @@ test -f docs/PRD.md
 
 Lee `.planning/state.json`. Casos:
 
-- **`status` ≠ `promoted` y ≠ `closed`** → "El milestone activo no esta en PROD todavia. No se cierra un milestone que no llego a produccion. Sigue el loop con `/verificar-dev` y `/promover-prod`."
-- **`activeMilestone` vacio** → "No hay milestone activo. Probablemente este es el primer milestone del proyecto. Corre `/plan-milestone` y especifica con cual arrancar."
+- **`status` ≠ `promoted` y ≠ `closed`** → "El milestone activo no esta en PROD todavia. No se cierra un milestone que no llego a produccion. Sigue el loop con `/p-verificar-dev` y `/p-promover-prod`."
+- **`activeMilestone` vacio** → "No hay milestone activo. Probablemente este es el primer milestone del proyecto. Corre `/p-planear-milestone` y especifica con cual arrancar."
 
 ## Plan que anuncias al usuario
 
@@ -33,7 +33,7 @@ Lee `.planning/state.json`. Casos:
 > 4. Tu confirmas o eliges otro.
 > 5. Actualizo `.planning/state.json`: el actual pasa a historial, el nuevo queda como activo.
 >
-> Esto NO planea el nuevo milestone — eso lo haces despues con `/plan-milestone`.
+> Esto NO planea el nuevo milestone — eso lo haces despues con `/p-planear-milestone`.
 >
 > ¿Procedo?
 
@@ -51,7 +51,7 @@ Muestra resumen del milestone que se cierra (lee de state.json + environments.js
 > - Tag git: `<TAG si existe en history>`
 > - Promovido el: `<promotedAt>`
 >
-> ¿Cerramos? Si dices que si, ya no se vuelve a marcar como activo (aunque puedes seguir trabajando en bugs sobre este milestone con `/debug-error`).
+> ¿Cerramos? Si dices que si, ya no se vuelve a marcar como activo (aunque puedes seguir trabajando en bugs sobre este milestone con `/p-diagnosticar-error`).
 
 Espera confirmacion.
 
@@ -69,7 +69,7 @@ Si no hay mas milestones:
 > 1. Medir el KPI definido en la seccion 3 del PRD y comparar con la meta.
 > 2. Actualizar `docs/PRD.md` con el resultado final del KPI.
 > 3. Avisar a stakeholders.
-> 4. Si quieres extender el proyecto, agrega nuevos milestones al PRD y corre `/plan-milestone`.
+> 4. Si quieres extender el proyecto, agrega nuevos milestones al PRD y corre `/p-planear-milestone`.
 >
 > Marco el proyecto como completo en state.json. ¿Confirmas?
 
@@ -145,9 +145,9 @@ Lee `currentVersion` de state.json para mostrar el contexto:
 > - Cerrado: **`<milestone anterior>`** — version **v<X.Y>** en PROD
 > - Activo: **`<nuevo milestone>`** — `<titulo>` (sera **v<X+1>.0** cuando se promueva)
 >
-> Siguiente paso: `/plan-milestone` para arrancar la planeacion del nuevo milestone.
+> Siguiente paso: `/p-planear-milestone` para arrancar la planeacion del nuevo milestone.
 >
-> Si en algun momento necesitas hacer un ajuste pequeno sobre lo que ya esta en PROD sin meterlo a este milestone, recuerda que `/quick-fix` esta disponible (sera v<X>.<Y+1>).
+> Si en algun momento necesitas hacer un ajuste pequeno sobre lo que ya esta en PROD sin meterlo a este milestone, recuerda que `/p-arreglo-rapido` esta disponible (sera v<X>.<Y+1>).
 
 ## Errores comunes
 
@@ -157,8 +157,8 @@ Lee `currentVersion` de state.json para mostrar el contexto:
 
 ## Que NO hacer
 
-- No planees el nuevo milestone aqui. Esa es la responsabilidad de `/plan-milestone`.
+- No planees el nuevo milestone aqui. Esa es la responsabilidad de `/p-planear-milestone`.
 - No cierres milestones que no estan en PROD. El criterio de cierre es **deployment a PROD exitoso**.
 - No borres entradas del `history`. Es el log auditable del proyecto.
 - No marques `project-complete` sin confirmacion explicita del usuario.
-- No modifiques `docs/PRD.md` desde aqui. Si el usuario quiere agregar milestones nuevos, que lo haga el mismo o con `/plan-milestone`.
+- No modifiques `docs/PRD.md` desde aqui. Si el usuario quiere agregar milestones nuevos, que lo haga el mismo o con `/p-planear-milestone`.
