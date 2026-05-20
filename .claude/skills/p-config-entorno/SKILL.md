@@ -69,7 +69,19 @@ Verifica si nvm ya esta:
 
 Si esta presente, salta a 3.
 
-Si falta, instala con el script oficial:
+Si falta, instala con el script oficial. **Advertencia de seguridad al usuario antes de ejecutar**:
+
+> Voy a instalar nvm usando el comando oficial recomendado por nvm-sh/nvm:
+>
+> ```
+> curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+> ```
+>
+> Este es el patron "pipe-to-shell": descarga un script y lo ejecuta directo. Es la forma oficial documentada por nvm, pero implica confiar en el repo `github.com/nvm-sh/nvm`. La URL apunta a la version `v0.40.1` etiquetada (no a HEAD) para que el script no cambie sin que sepamos. Si prefieres revisar el script antes, abre la URL en el navegador, leelo, y vuelve a confirmar.
+>
+> ¿Procedo?
+
+Solo continua si el usuario confirma explicitamente. **No cambies la URL ni el tag** — debe ser exactamente el comando documentado por nvm.
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
@@ -126,8 +138,16 @@ git config --global user.name && git config --global user.email
 
 Si alguno esta vacio:
 - Pregunta al usuario su **nombre completo** (sugiere usar el que aparece en su correo Habi).
-- Pregunta su **email corporativo de Habi**.
-- Configura:
+- Pregunta su **email corporativo de Habi** (debe terminar en `@habi.co`).
+- **Antes de aplicar el `git config --global`, muestra al usuario los valores exactos que vas a setear y pide confirmacion explicita** (esta es una configuracion global que afectara todos los commits futuros en este computador, incluso en otros repos):
+
+  > Voy a configurar tu identidad de git GLOBAL (afectara todos tus repos en este computador) con:
+  > - `user.name`: `<nombre>`
+  > - `user.email`: `<email>`
+  >
+  > Si esto es correcto, confirma. Si quieres cambiar algo, dime.
+
+Solo despues de confirmacion, aplica:
 
 ```bash
 git config --global user.name "<nombre>"
@@ -138,7 +158,7 @@ Confirma el resultado.
 
 ### 6. Verificar autenticacion de clasp
 
-Verifica si `~/.clasprc.json` existe:
+⚠️ **Privacidad de credenciales**: el archivo `~/.clasprc.json` contiene tokens OAuth sensibles de la cuenta de Google del usuario. **La skill solo verifica su EXISTENCIA con `test -f`** — **NUNCA leas el contenido del archivo, NUNCA lo muestres en el chat, NUNCA lo copies a otra ubicacion**. Si por algun motivo el contenido del archivo aparece en tu razonamiento o output, redacta tipo `[REDACTADO: ~/.clasprc.json contiene tokens sensibles]`.
 
 ```bash
 test -f ~/.clasprc.json && echo "clasp autenticado" || echo "clasp no autenticado"
@@ -163,13 +183,27 @@ test -f ~/.clasprc.json && echo "OK: autenticado"
 
 ### 7. Dependencias del repo
 
-Si el repo tiene `package.json` y `node_modules/` no existe, corre:
+Si el repo tiene `package.json` y `node_modules/` no existe, **muestra al usuario primero el contenido de las secciones `dependencies` y `devDependencies` de `package.json`** para que confirme. `npm install` ejecuta scripts post-install de cada paquete (vector de supply chain attack), asi que conviene revisar que solo se instalen paquetes esperados.
+
+```bash
+node -e "
+  const p = require('./package.json');
+  console.log('dependencies:', JSON.stringify(p.dependencies || {}, null, 2));
+  console.log('devDependencies:', JSON.stringify(p.devDependencies || {}, null, 2));
+"
+```
+
+Pide confirmacion:
+
+> Estas son las dependencias que se van a instalar. ¿Las reconoces todas o quieres revisar alguna antes? Si todo bien, procedo con `npm install`.
+
+Si confirma:
 
 ```bash
 export NVM_DIR="$HOME/.nvm" && \. "$NVM_DIR/nvm.sh" && npm install
 ```
 
-(El template actual no tiene dependencias en `package.json`, pero proyectos derivados pueden tenerlas.)
+(El template actual no tiene dependencias en `package.json`, pero proyectos derivados pueden tenerlas — la verificacion es defensiva para esos casos.)
 
 ### 8. Cierre
 
