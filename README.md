@@ -29,10 +29,10 @@ Cada proyecto Prometeo se construye en **milestones entregables**. Cada mileston
 ```
         ┌──────────┐    ┌───────────┐    ┌────────────┐    ┌──────────┐
    ┌──> │  PLANEAR │ ──>│ EJECUTAR  │ ──>│ VERIFICAR  │ ──>│ PROMOVER │──┐
-   │    │ /plan-…  │    │ /ejecutar-│    │ /verificar-│    │/promover-│  │
+   │    │ /p-plan…  │   │ /p-ejecutar│   │ /p-verificar│   │/p-promover│  │
    │    └──────────┘    └───────────┘    └────────────┘    └──────────┘  │
    │                                                                      │
-   └────────────── /nuevo-milestone (siguiente) ─────────────────────────-┘
+   └────────────── /p-nuevo-milestone (siguiente) ─────────────────────────-┘
 ```
 
 Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
@@ -43,14 +43,16 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
 | Skill | Cuando | Que hace |
 | --- | --- | --- |
-| `/config-entorno` | 1 vez por computador | Instala Node 20 LTS, nvm, clasp, configura git |
-| `/config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
-| `/plan-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
-| `/ejecutar-milestone` | Por milestone | Implementa el plan + `npm run push:dev` (sin commit — cambios visibles en Source Control) |
-| `/verificar-dev` | Por milestone | 5 fases: revision estatica, autoverificacion con browser de Cursor, fix loop, checklist guiado, deploy:dev |
-| `/promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
-| `/debug-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
-| `/nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
+| `/p-config-entorno` | 1 vez por computador | Instala Node 20 LTS, nvm, clasp, configura git |
+| `/p-config-appsscript` | 1 vez por proyecto | Crea proyectos DEV/PROD en Apps Script + rama `dev` en GitHub + smoke test |
+| `/p-planear-milestone` | Por milestone | Lee PRD, propone plan, genera `docs/milestones/<M>-plan.md` (sin commit) |
+| `/p-ejecutar-milestone` | Por milestone | Implementa el plan + `npm run deploy:dev` (sube y actualiza el deployment estable de DEV — sin commit; cambios visibles en Source Control) |
+| `/p-verificar-dev` | Por milestone | 4 fases: revision estatica del codigo + verificacion guiada contigo en el editor de Apps Script (tu ejecutas, el asistente analiza logs y outputs) + fix loop + marcar como VALIDADO |
+| `/p-promover-prod` | Por milestone | **Un commit** + push a ramas `dev` y `main` en GitHub + `npm run promote` (PROD) |
+| `/p-diagnosticar-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
+| `/p-nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
+| `/p-arreglo-rapido` | Ajuste pequeno sobre algo ya en PROD | Plan inline + ejecutar + verificar; **no promueve** (te invita a correr `/p-promover-prod`). Versionado decimal: v2.0 → v2.1 |
+| `/p-actualizar-template` | Cuando hay nueva version del template | Trae actualizaciones de skills, docs y scripts desde el repo plantilla. No toca tu codigo ni tu PRD/milestones. Backup automatico de archivos managed modificados. |
 
 Todas las skills viven en `.claude/skills/` y se invocan con `/<nombre>` en el chat de Cursor (Agent Mode).
 
@@ -77,13 +79,13 @@ Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PR
 1. En el chat de Cursor (Agent Mode), corre:
 
    ```
-   /config-entorno
+   /p-config-entorno
    ```
 
 2. Cuando termine:
 
    ```
-   /config-appsscript
+   /p-config-appsscript
    ```
 
 3. Copia tu PRD aprobado al repo como `docs/PRD.md` (instrucciones en la seccion 2.3 de la Guia Prometeo).
@@ -91,7 +93,7 @@ Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PR
 4. Empieza a construir:
 
    ```
-   /plan-milestone
+   /p-planear-milestone
    ```
 
 ---
@@ -107,16 +109,16 @@ Usa el **prompt maestro de instalacion** ([`docs/PROMPT-INSTALACION.md`](docs/PR
 **GitHub** (donde se guarda el historial):
 
 - Rama `main` — codigo actualmente en Apps Script PROD.
-- Rama `dev` — codigo actualmente validado en Apps Script DEV (creada por `/config-appsscript`).
+- Rama `dev` — codigo actualmente validado en Apps Script DEV (creada por `/p-config-appsscript`).
 
 **Flujo de cambios**:
 
 ```
-edicion local → npm run push:dev → Apps Script DEV → /promover-prod →
+edicion local → npm run deploy:dev → Apps Script DEV (mismo deploymentId siempre) → /p-promover-prod →
   → 1 commit local → push a rama dev en GitHub → push a rama main en GitHub → npm run promote → Apps Script PROD
 ```
 
-**Toda edicion nace en local. No se edita en el editor web de Apps Script.** Durante el milestone los cambios NO se commitean — se acumulan visibles en el panel Source Control de Cursor para que los revises facil. `/promover-prod` hace el commit unico al final.
+**Toda edicion nace en local. No se edita en el editor web de Apps Script.** Durante el milestone los cambios NO se commitean — se acumulan visibles en el panel Source Control de Cursor para que los revises facil. `/p-promover-prod` hace el commit unico al final.
 
 Ver detalle en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -126,9 +128,9 @@ Ver detalle en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
 | Comando | Que hace |
 | --- | --- |
-| `npm run push:dev` | Sube codigo a DEV (sin crear deployment) |
+| `npm run push:dev` | Sube codigo a DEV sin tocar el deployment (uso raro — preferir `deploy:dev`) |
 | `npm run push:prod` | Sube codigo a PROD (sin crear deployment, raro) |
-| `npm run deploy:dev` | Push + crea deployment en DEV, guarda `deploymentId` |
+| `npm run deploy:dev` | Push + actualiza el deployment estable de DEV (mismo `deploymentId` siempre; el primer deploy crea el ID y lo guarda en `environments.json`) |
 | `npm run deploy:prod` | Push + crea deployment en PROD |
 | `npm run promote` | Push + deployment en PROD (promocion estandar desde DEV validado) |
 | `npm run open:dev` | Abre DEV en el navegador (solo para logs/ejecutar) |

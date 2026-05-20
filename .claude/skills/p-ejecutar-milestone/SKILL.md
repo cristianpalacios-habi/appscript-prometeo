@@ -1,15 +1,15 @@
 ---
-name: ejecutar-milestone
+name: p-ejecutar-milestone
 description: Implementa el plan aprobado del milestone activo. Escribe codigo local en archivos separados por responsabilidad, sube el codigo a Apps Script DEV (push, sin deployment). No hace commits — los cambios quedan en el working directory para que el usuario los revise en el panel Source Control de Cursor.
 ---
 
-# /ejecutar-milestone
+# /p-ejecutar-milestone
 
-Ejecuta el plan generado por `/plan-milestone`. **Escribe codigo local y lo sube a Apps Script DEV.** No commitea — los cambios se acumulan sin commitear hasta `/promover-prod`, asi el usuario puede ver toda la diferencia del milestone en un solo lugar (Source Control de Cursor).
+Ejecuta el plan generado por `/p-planear-milestone`. **Escribe codigo local y lo sube a Apps Script DEV.** No commitea — los cambios se acumulan sin commitear hasta `/p-promover-prod`, asi el usuario puede ver toda la diferencia del milestone en un solo lugar (Source Control de Cursor).
 
 ## Cuando usar
 
-- Despues de `/plan-milestone` (plan aprobado y escrito en `docs/milestones/<milestone>-plan.md`).
+- Despues de `/p-planear-milestone` (plan aprobado y escrito en `docs/milestones/<milestone>-plan.md`).
 - El usuario dice: "ejecuta el plan", "implementalo", "vamos con la implementacion", "ya esta el plan, codifica".
 
 ## Pre-checks (aborta si falla)
@@ -22,10 +22,10 @@ test -f environments.json
 
 Lee `.planning/state.json`. Casos:
 
-- **Sin `state.json` o `activeMilestone` vacio** → "No hay milestone activo. Corre `/plan-milestone` primero."
+- **Sin `state.json` o `activeMilestone` vacio** → "No hay milestone activo. Corre `/p-planear-milestone` primero."
 - **`status` ≠ `planned` y ≠ `executing` y ≠ `verifying`** → segun valor:
-  - `planning` → "El plan no esta aprobado todavia. Termina `/plan-milestone` primero."
-  - `promoted` o `closed` → "Este milestone ya esta en una fase posterior. Si quieres re-ejecutarlo, replanea con `/plan-milestone`."
+  - `planning` → "El plan no esta aprobado todavia. Termina `/p-planear-milestone` primero."
+  - `promoted` o `closed` → "Este milestone ya esta en una fase posterior. Si quieres re-ejecutarlo, replanea con `/p-planear-milestone`."
 
 Si `status` = `executing` o `verifying`, **estamos retomando o iterando** — eso es normal con esta skill porque no hay commits intermedios; los cambios pendientes ya estan en el working directory.
 
@@ -35,7 +35,7 @@ Verifica que exista el plan:
 test -f docs/milestones/<activeMilestone>-plan.md
 ```
 
-Si no existe → "El plan del milestone activo no esta. Corre `/plan-milestone`."
+Si no existe → "El plan del milestone activo no esta. Corre `/p-planear-milestone`."
 
 Verifica `dev.scriptId`:
 
@@ -43,7 +43,7 @@ Verifica `dev.scriptId`:
 node -e "const e=require('./environments.json'); if(!e.dev?.scriptId || e.dev.scriptId.startsWith('PEGA_AQUI')) process.exit(1)"
 ```
 
-Si falla → "DEV no esta configurado. Corre `/config-appsscript`."
+Si falla → "DEV no esta configurado. Corre `/p-config-appsscript`."
 
 ## Plan que anuncias al usuario
 
@@ -54,8 +54,8 @@ Si falla → "DEV no esta configurado. Corre `/config-appsscript`."
 > - **No commiteo nada** — los cambios quedan visibles en el panel Source Control de Cursor.
 > - **Solo pauso si encuentro una desviacion** del plan (scope OAuth nuevo, propiedad nueva, archivo extra no contemplado, trigger distinto).
 > - Detalles internos (helpers, naming, formato) los resuelvo sin pausar.
-> - Al terminar, **subo el codigo a Apps Script DEV** con `npm run push:dev`.
-> - El commit se hace despues, en `/promover-prod`, con todos los cambios del milestone juntos.
+> - Al terminar, **subo el codigo a Apps Script DEV** con `npm run deploy:dev` (push + actualiza el deployment de DEV reutilizando el mismo ID — el URL del proyecto en DEV no cambia entre milestones).
+> - El commit se hace despues, en `/p-promover-prod`, con todos los cambios del milestone juntos.
 >
 > ¿Procedo?
 
@@ -107,7 +107,7 @@ Reglas de organizacion (de CLAUDE.md):
 
 - **`appsscript.json`**: si el plan agrega scopes nuevos, edita el manifest con los scopes listados. No agregues scopes que el plan no menciona.
 
-- **Triggers**: si el plan menciona un trigger time-driven, no lo crees con codigo de `ScriptApp.newTrigger(...)` en una funcion `main()`. Crea una funcion separada `installTriggers()` que el usuario corre una sola vez en el editor durante la verificacion. La skill `/verificar-dev` lo recuerda.
+- **Triggers**: si el plan menciona un trigger time-driven, no lo crees con codigo de `ScriptApp.newTrigger(...)` en una funcion `main()`. Crea una funcion separada `installTriggers()` que el usuario corre una sola vez en el editor durante la verificacion. La skill `/p-verificar-dev` lo recuerda.
 
 ### 4. Validacion sintactica local
 
@@ -144,13 +144,30 @@ Si aprueba, **actualiza `docs/milestones/<milestone>-plan.md`** con el cambio y 
 
 No pauses por: naming de variables, estructura interna de funciones, helpers privados, comentarios.
 
-### 6. Subir codigo a Apps Script DEV
+### 6. Subir codigo y actualizar deployment de DEV
 
-```bash
-npm run push:dev
+Construye una descripcion estable para el deployment del milestone. Sugiero:
+
+```
+<milestone> - <objetivo del plan, max 60 char>
 ```
 
-Esto sube el codigo al proyecto DEV sin crear deployment (la version "viva" del editor refleja el codigo recien escrito).
+Ejemplo: `M1 - Procesar tickets pendientes y mandar reporte diario`
+
+No incluyas timestamp — la descripcion se mantiene durante todo el milestone, lo que cambia es el codigo subido.
+
+Ejecuta:
+
+```bash
+npm run deploy:dev -- --desc "<milestone> - <objetivo>"
+```
+
+Esto:
+1. Sube el codigo al proyecto DEV (`clasp push --force`).
+2. **Reutiliza el `deploymentId` existente** que esta en `environments.json` (creado en `/p-config-appsscript`), actualizando solo el codigo y la descripcion. **El URL del deployment NO cambia** — el humano puede tener abierta la pestana de DEV y solo refrescar para ver el codigo nuevo.
+3. Guarda la fecha del ultimo deploy en `environments.json` (`deployedAt`).
+
+Verifica el output: debe decir `Deployment ID (reutilizado): <id>`. Si dice "Creando deployment nuevo", es que el deploymentId no estaba registrado — eso pasaria si `/p-config-appsscript` se salto el primer deploy. En ese caso, el nuevo ID se guarda automaticamente y futuras corridas lo reutilizaran.
 
 Si falla:
 - **Apps Script API not enabled** → guia al usuario a `script.google.com/home/usersettings` para habilitarla.
@@ -174,17 +191,18 @@ Resumen:
 > - `docs/milestones/<milestone>-plan.md` (si hubo desviacion aprobada)
 > - `.planning/state.json`
 >
-> **Codigo subido a Apps Script DEV** ✓
+> **Codigo subido a Apps Script DEV** ✓ (deployment de DEV actualizado, mismo URL de siempre)
 >
-> Puedes revisar todos los cambios en el panel **Source Control** de Cursor (icono de rama en la barra lateral). **No hay commit aun** — el commit se hace en `/promover-prod` con todo el milestone junto.
+> Puedes revisar todos los cambios en el panel **Source Control** de Cursor (icono de rama en la barra lateral). **No hay commit aun** — el commit se hace en `/p-promover-prod` con todo el milestone junto.
 
 ### 8. Marcar fin de ejecucion
 
-Actualiza `.planning/state.json`:
+Actualiza `.planning/state.json` (incluye marca de tipo de release pendiente para que `/p-promover-prod` versione correctamente):
 
 ```json
 {
   "status": "executed",
+  "pendingReleaseType": "milestone",
   "lastUpdated": "<ISO now>"
 }
 ```
@@ -201,23 +219,24 @@ Actualiza `.planning/state.json`:
 >   - `RECIPIENT_EMAIL` = <valor de prueba>
 >   - `OTRA_KEY` = <valor de prueba>
 >
-> **Siguiente paso**: `/verificar-dev` para validar codigo, autoverificar con el browser de Cursor, y guiar el checklist contigo.
+> **Siguiente paso**: `/p-verificar-dev` para validar codigo, autoverificar con el browser de Cursor, y guiar el checklist contigo.
 
 Si hay propiedades pendientes, **lista las claves** que el usuario debe configurar.
 
 ## Errores comunes y como manejarlos
 
-- **`npm run push:dev` falla con "Apps Script API not enabled"** → guia a `script.google.com/home/usersettings`.
+- **`npm run deploy:dev` falla con "Apps Script API not enabled"** → guia a `script.google.com/home/usersettings`.
+- **`npm run deploy:dev` falla con "deployment not found"** → el `deploymentId` guardado en `environments.json` ya no existe en Apps Script (puede pasar si el usuario borro el deployment manualmente). Borra el campo `deploymentId` de `environments.json` para el ambiente afectado y vuelve a correr — creara uno nuevo.
 - **`node --check` falla** → corrige sintaxis antes de seguir.
 - **Plan ambiguo o vacio** → no inventes. Pausa y dile al usuario: "el plan no detalla X. ¿Cual es la decision?". Si es importante, actualiza el plan antes de seguir.
 - **`git status` muestra archivos rastreados que deberian ser gitignored** (`environments.json`, `docs/IDS.md`, `node_modules/`) → alerta al usuario, hay un fallo en `.gitignore`.
 
 ## Que NO hacer
 
-- **No commitees.** Ningun `git commit`, ni `git add` (excepto si necesitas inspeccionar `git status`). El commit es responsabilidad de `/promover-prod`.
-- **No hagas `git push` a GitHub.** Eso tambien es de `/promover-prod`.
-- No corras `npm run deploy:dev`, `deploy:prod`, `promote` ni `clasp deploy`. Eso es de `/verificar-dev` (final) y `/promover-prod`.
+- **No commitees.** Ningun `git commit`, ni `git add` (excepto si necesitas inspeccionar `git status`). El commit es responsabilidad de `/p-promover-prod`.
+- **No hagas `git push` a GitHub.** Eso tambien es de `/p-promover-prod`.
+- No corras `deploy:prod` ni `promote` aqui — eso es de `/p-promover-prod`.
 - No abras el editor de Apps Script en esta skill — salvo recordarle al usuario que configure Script Properties al final.
 - No agregues "mejoras" fuera del plan (refactors, logging extra, manejo de errores para casos no previstos). Si crees que vale la pena, registralo como sugerencia en el cierre, no en el codigo.
 - No saltes `node --check`. Es la unica validacion local antes del push a DEV.
-- No marques `status: "executed"` si hubo errores no resueltos o si `npm run push:dev` fallo.
+- No marques `status: "executed"` si hubo errores no resueltos o si `npm run deploy:dev` fallo.

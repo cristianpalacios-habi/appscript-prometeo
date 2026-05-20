@@ -1,24 +1,40 @@
 ---
-name: promover-prod
-description: Cierra el milestone verificado. Hace UN solo commit con todos los cambios acumulados, lo sube a las ramas dev y main en GitHub en ese orden, y por ultimo despliega a Apps Script PROD via npm run promote. Crea tag de git, smoke test minimo y cierra el milestone en el estado del proyecto.
+name: p-promover-prod
+description: Cierra el milestone verificado o quick-fix listo. Hace UN solo commit con todos los cambios acumulados, lo sube a las ramas dev y main en GitHub en ese orden, y por ultimo despliega a Apps Script PROD via npm run promote. Aplica versionado decimal (milestones = mayor, fixes = menor) en commit, tag y deployment. Cierra el release en el estado del proyecto.
 ---
 
-# /promover-prod
+# /p-promover-prod
 
-Cierra el milestone validado. Es la unica skill del loop que **commitea**, **sube a GitHub** y **toca PROD**. Lo hace en este orden exacto:
+Cierra el release validado (milestone o quick-fix). Es la unica skill del loop que **commitea**, **sube a GitHub** y **toca PROD**. Lo hace en este orden exacto:
 
 ```
-1. Commit del milestone (un solo commit, todos los cambios)
-2. Push a rama `dev` en GitHub      ← checkpoint pre-prod
-3. Push a rama `main` en GitHub     ← canonical
-4. Apps Script PROD (npm run promote)
-5. Tag git + smoke test + cierre del milestone
+1. Determinar tipo de release y calcular version nueva (v<M>.<F>)
+2. Commit del release (un solo commit, todos los cambios)
+3. Push a rama `dev` en GitHub      ← checkpoint pre-prod
+4. Push a rama `main` en GitHub     ← canonical
+5. Apps Script PROD (npm run promote)
+6. Tag git v<X.Y> + smoke test + cierre del release
 ```
 
 ## Cuando usar
 
-- Despues de `/verificar-dev` con `status: "verified"`.
+- Despues de `/p-verificar-dev` con `status: "verified"` (release tipo `milestone`).
+- Despues de `/p-arreglo-rapido` con `status: "fix-verified"` (release tipo `fix`).
 - El usuario dice: "promueve a prod", "vamos a produccion", "saquemoslo a prod".
+
+## Versionado decimal — modelo
+
+El estado del proyecto lleva un contador de version `currentVersion = "<major>.<minor>"` en `.planning/state.json`:
+
+- **Major** = numero de milestones ya promovidos (M1 → 1, M2 → 2, ...).
+- **Minor** = numero de quick-fixes promovidos despues del milestone actual.
+
+**Reglas de incremento al promover**:
+
+- Si `pendingReleaseType: "milestone"` → nueva version = `(major + 1).0`. Ej: v2.3 → v3.0.
+- Si `pendingReleaseType: "fix"` → nueva version = `major.(minor + 1)`. Ej: v2.3 → v2.4.
+
+Si `pendingReleaseType` no esta seteado (compatibilidad con state.json viejos), asume `"milestone"` y avisa al usuario.
 
 ## Pre-checks (aborta si falla)
 
@@ -27,13 +43,18 @@ test -f .planning/state.json
 test -f environments.json
 ```
 
-Lee `.planning/state.json`. Casos:
+Lee `.planning/state.json`. Casos validos:
 
-- **`status` ≠ `verified`** → segun valor:
-  - `planning` / `planned` / `executing` → "El milestone no esta validado. Corre `/ejecutar-milestone` y luego `/verificar-dev`."
-  - `verifying` → "La verificacion no termino. Termina con `/verificar-dev`."
-  - `promoted` / `closed` → "Este milestone ya esta en prod. ¿Re-promover o avanzar con `/nuevo-milestone`?"
-- **`failedChecks` no vacio** → "Hay items del checklist sin pasar: <lista>. No promuevo hasta resolver. Vuelve a `/verificar-dev`."
+- `status: "verified"` y `pendingReleaseType: "milestone"` → promueve milestone.
+- `status: "fix-verified"` y `pendingReleaseType: "fix"` → promueve quick-fix.
+
+Casos invalidos:
+
+- `planning` / `planned` / `executing` → "El release no esta validado. Corre `/p-ejecutar-milestone` y luego `/p-verificar-dev`."
+- `verifying` → "La verificacion no termino. Termina con `/p-verificar-dev`."
+- `quick-fixing` → "El quick-fix no termino. Vuelve a `/p-arreglo-rapido`."
+- `promoted` / `closed` → "Ya esta promovido. ¿Avanzar con `/p-nuevo-milestone`?"
+- `failedChecks` no vacio → "Hay items del checklist sin pasar: <lista>. No promuevo hasta resolver."
 
 Lee `environments.json`:
 
@@ -48,7 +69,7 @@ Verifica que hay cambios pendientes para commitear (es lo esperado):
 git status --porcelain
 ```
 
-- Si vacio → "No hay cambios para promover. ¿Olvidaste `/ejecutar-milestone` o ya promoviste este milestone?"
+- Si vacio → "No hay cambios para promover. ¿Olvidaste `/p-ejecutar-milestone` o ya promoviste este milestone?"
 - Si hay cambios → ok, sigue.
 
 Verifica que estamos en la rama `main` local:
@@ -66,14 +87,18 @@ git ls-remote --heads origin dev main
 ```
 
 - Si falta `dev` remota → la skill la crea en el paso 3 (no es error).
-- Si falta `main` remota → "El repo no tiene rama `main` en GitHub. Revisa `/config-appsscript` o crea manualmente con `git push -u origin main`."
+- Si falta `main` remota → "El repo no tiene rama `main` en GitHub. Revisa `/p-config-appsscript` o crea manualmente con `git push -u origin main`."
 
 ## Plan que anuncias al usuario
 
-> Voy a promover **`<milestone>`** a PROD. El flujo es:
+Calcula la version nueva primero. Sea `<RELEASE_LABEL>`:
+- Si milestone: `M<n> (v<X.0>)` ej. `M3 (v3.0)`.
+- Si fix: `quick-fix v<X.Y>` ej. `quick-fix v2.4`.
+
+> Voy a promover **`<RELEASE_LABEL>`** a PROD. El flujo es:
 >
 > 1. Configurar las propiedades de Script en PROD (probablemente con valores distintos a DEV — destinatarios reales, API keys de produccion).
-> 2. Hacer **un solo commit** con todos los cambios del milestone.
+> 2. Hacer **un solo commit** con todos los cambios.
 > 3. Subir el commit a la rama `dev` en GitHub (checkpoint pre-produccion).
 > 4. Subir a la rama `main` en GitHub (canonical).
 > 5. Desplegar a Apps Script PROD con `npm run promote`.
@@ -140,16 +165,30 @@ git diff --stat
 
 Espera respuesta.
 
-Lee del plan el `## Objetivo` (1 frase). Construye:
+Construye el mensaje del commit segun tipo:
+
+**Si milestone** (lee `## Objetivo` del plan, 1 frase):
 
 ```
 feat(<milestone>): <objetivo>
 
 - archivo1: cambio principal
 - archivo2: cambio principal
-- ...
 
+Version: v<X.0>
 Plan: docs/milestones/<milestone>-plan.md
+```
+
+**Si quick-fix** (lee `pendingFixDescription` de state.json):
+
+```
+fix(v<X.Y>): <descripcion>
+
+- archivo1: cambio
+- archivo2: cambio
+
+Version: v<X.Y>
+Registro: docs/fixes/v<X.Y>-fix.md
 ```
 
 Stage todo lo no-gitignored:
@@ -158,16 +197,11 @@ Stage todo lo no-gitignored:
 git add -A
 ```
 
-Commit:
+Commit con HEREDOC:
 
 ```bash
 git commit -m "$(cat <<'EOF'
-feat(<milestone>): <objetivo>
-
-- <archivo1>: <cambio>
-- <archivo2>: <cambio>
-
-Plan: docs/milestones/<milestone>-plan.md
+<mensaje construido arriba>
 EOF
 )"
 ```
@@ -210,11 +244,13 @@ Mismo manejo de divergencia con aprobacion explicita si falla.
 
 ### 5. Desplegar a Apps Script PROD
 
-Construye descripcion del deployment:
+Construye descripcion del deployment con la version:
 
 ```
-<milestone> - PROD - <objetivo, max 60 char> - <YYYY-MM-DD HH:MM>
+v<X.Y> - <descripcion corta, max 60 char> - <YYYY-MM-DD HH:MM>
 ```
+
+Ej: `v3.0 - reporte auditoria automatizado - 2026-05-16 14:30` o `v2.4 - ajuste destinatario - 2026-05-16 14:30`.
 
 Pregunta:
 
@@ -277,7 +313,7 @@ Confirma con el usuario que ve el nuevo deploymentId.
 npm run open:prod
 ```
 
-Guia al usuario igual que `/verificar-dev` Fase D. Si arranca sin error: pasa. Si falla:
+Guia al usuario igual que `/p-verificar-dev` Fase D. Si arranca sin error: pasa. Si falla:
 
 ```json
 { "status": "promoted-but-broken", "lastUpdated": "<ISO now>" }
@@ -287,15 +323,19 @@ Aviso:
 
 > Smoke test en PROD fallo. Esto es serio: PROD ya tiene el codigo desplegado pero no funciona. Acciones:
 > 1. Si es propiedad faltante, configurala (paso 1) y reintenta.
-> 2. Si es bug en codigo, vuelve a `/debug-error` — el fix arranca un nuevo mini-milestone.
+> 2. Si es bug en codigo, vuelve a `/p-diagnosticar-error` — el fix arranca un nuevo mini-milestone.
 > 3. No desinstales triggers ni asumas que prod esta operando.
 
 ### 7. Crear tag de git
 
+El tag es simplemente la version:
+
 ```bash
-TAG="<milestone>-prod-$(date +%Y%m%d)"
-git tag -a "$TAG" -m "Promocion a PROD: <milestone> - <objetivo>"
+TAG="v<X.Y>"
+git tag -a "$TAG" -m "Promocion a PROD: <RELEASE_LABEL> - <descripcion>"
 ```
+
+Ej: `v3.0` para milestone o `v2.4` para quick-fix. Si el tag ya existe (raro, pero posible si re-promueves), agrega sufijo `-r2` y avisa al usuario.
 
 Pregunta al usuario si sube el tag:
 
@@ -307,29 +347,69 @@ Si si:
 git push origin "$TAG"
 ```
 
-### 8. Cerrar el milestone en el estado
+### 8. Cerrar el release en el estado
 
-Actualiza `.planning/state.json`:
+Actualiza `.planning/state.json` con versionado:
+
+**Si milestone**:
 
 ```json
 {
+  "currentVersion": "<X.0>",
+  "currentMilestoneNumber": <X>,
+  "currentFixNumber": 0,
   "activeMilestone": "<milestone>",
   "status": "promoted",
   "promotedAt": "<ISO now>",
   "lastUpdated": "<ISO now>",
+  "pendingReleaseType": null,
   "history": [
     ...entradas previas,
     {
+      "version": "v<X.0>",
+      "type": "milestone",
       "milestone": "<milestone>",
+      "objetivo": "<del plan>",
       "closedAt": "<YYYY-MM-DD>",
       "deploymentIdDev": "<dev.deploymentId>",
       "deploymentIdProd": "<prod.deploymentId>",
-      "tag": "<TAG>",
+      "tag": "v<X.0>",
       "commit": "<git rev-parse HEAD>"
     }
   ]
 }
 ```
+
+**Si quick-fix**:
+
+```json
+{
+  "currentVersion": "<X.Y>",
+  "currentMilestoneNumber": <X>,
+  "currentFixNumber": <Y>,
+  "status": "promoted",
+  "promotedAt": "<ISO now>",
+  "lastUpdated": "<ISO now>",
+  "pendingReleaseType": null,
+  "pendingFixDescription": null,
+  "pendingFixVersion": null,
+  "history": [
+    ...entradas previas,
+    {
+      "version": "v<X.Y>",
+      "type": "fix",
+      "description": "<pendingFixDescription previo>",
+      "closedAt": "<YYYY-MM-DD>",
+      "deploymentIdProd": "<prod.deploymentId>",
+      "tag": "v<X.Y>",
+      "commit": "<git rev-parse HEAD>",
+      "registro": "docs/fixes/v<X.Y>-fix.md"
+    }
+  ]
+}
+```
+
+Nota: el `activeMilestone` no cambia al promover un fix — sigue siendo el milestone padre. Solo se actualizan los contadores.
 
 ### 9. Sincronizar docs/IDS.md
 
@@ -363,7 +443,7 @@ git push origin main:dev
 > - Avisar al equipo / stakeholders.
 > - Si era el ultimo milestone: medir el KPI definido en el PRD y comparar con la meta.
 >
-> Si hay mas milestones pendientes, corre `/nuevo-milestone` para arrancar el siguiente.
+> Si hay mas milestones pendientes, corre `/p-nuevo-milestone` para arrancar el siguiente.
 
 ## Errores comunes y como manejarlos
 
@@ -376,7 +456,7 @@ git push origin main:dev
 ## Que NO hacer
 
 - No promuevas sin `status: "verified"` previo.
-- No edites codigo en esta skill. Si hay que cambiar algo, vuelves a `/debug-error` o `/ejecutar-milestone`.
+- No edites codigo en esta skill. Si hay que cambiar algo, vuelves a `/p-diagnosticar-error` o `/p-ejecutar-milestone`.
 - No ejecutes funciones destructivas o masivas como "smoke test" en PROD sin advertir.
 - No hagas `git push --force` sin aprobacion explicita del usuario.
 - No hagas `git push --delete` de tags.

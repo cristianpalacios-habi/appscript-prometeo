@@ -1,15 +1,15 @@
 ---
-name: config-appsscript
+name: p-config-appsscript
 description: Crea los proyectos dev y prod en Apps Script, vincula los scriptIds al repo, hace el primer deploy en ambos ambientes y corre un smoke test para validar que todo funciona. Una sola vez por proyecto.
 ---
 
-# /config-appsscript
+# /p-config-appsscript
 
 Crea y vincula los proyectos dev y prod en Apps Script al repo local. **Una sola vez por proyecto.** Si el usuario ya tiene scriptIds reales en `environments.json`, salta a la verificacion y smoke test.
 
 ## Cuando usar
 
-- Despues de `/config-entorno` (Node, clasp, autenticacion ya listos).
+- Despues de `/p-config-entorno` (Node, clasp, autenticacion ya listos).
 - El usuario dice cosas como: "crea los proyectos en Apps Script", "configura mis ambientes", "vincula el repo a Apps Script", "estoy listo para empezar a construir".
 - Cuando `environments.json` no existe o tiene scriptIds con placeholder.
 
@@ -34,7 +34,7 @@ git rev-parse --is-inside-work-tree
 
 Si algo falla, no improvises:
 
-- `clasp` no esta o no autenticado → dirige al usuario a `/config-entorno`.
+- `clasp` no esta o no autenticado → dirige al usuario a `/p-config-entorno`.
 - Archivos del template faltan → avisa que parece no estar en un repo Prometeo y aborta.
 - No es un repo de git → avisa y aborta.
 
@@ -188,7 +188,7 @@ Lee `environments.json` y escribe `docs/IDS.md` (gitignored). El archivo debe ve
 ```markdown
 # IDs del proyecto
 
-> Generado por `/config-appsscript`. Este archivo esta gitignored — no se sube a GitHub.
+> Generado por `/p-config-appsscript`. Este archivo esta gitignored — no se sube a GitHub.
 
 ## Resumen
 
@@ -212,7 +212,7 @@ Lee `environments.json` y escribe `docs/IDS.md` (gitignored). El archivo debe ve
 
 ## Regenerar este archivo
 
-Corre `/config-appsscript` de nuevo. Los IDs se sincronizan con `environments.json`.
+Corre `/p-config-appsscript` de nuevo. Los IDs se sincronizan con `environments.json`.
 ```
 
 Usa el tool de Write con la ruta `docs/IDS.md`. Crea `docs/` si no existe.
@@ -225,7 +225,7 @@ git config --get remote.origin.url || echo "(sin remoto configurado todavia)"
 
 ### 9. Crear rama `dev` en GitHub
 
-`/promover-prod` espera que la rama `dev` exista en GitHub. La creamos vacia (apuntando al mismo commit de main) para que el primer milestone pueda promover sin friccion.
+`/p-promover-prod` espera que la rama `dev` exista en GitHub. La creamos vacia (apuntando al mismo commit de main) para que el primer milestone pueda promover sin friccion.
 
 Verifica si ya existe:
 
@@ -253,7 +253,29 @@ git push -u origin main
 
 Si falla por permisos del remoto → "No tengo permisos de push en el remoto. Verifica que tienes acceso al repo en GitHub."
 
-### 10. Recordatorio sobre el PRD
+### 10. Inicializar estado del proyecto
+
+Crea `.planning/state.json` con valores iniciales si no existe (`/p-planear-milestone` lo creara si falta, pero hacerlo aqui asegura que los contadores de version arrancan limpios desde el setup):
+
+```bash
+mkdir -p .planning
+test -f .planning/state.json || cat > .planning/state.json <<'EOF'
+{
+  "currentVersion": "0.0",
+  "currentMilestoneNumber": 0,
+  "currentFixNumber": 0,
+  "activeMilestone": null,
+  "status": "not-started",
+  "pendingReleaseType": null,
+  "lastUpdated": "<ISO now>",
+  "history": []
+}
+EOF
+```
+
+Si `.planning/state.json` ya existe, no lo toques.
+
+### 12. Recordatorio sobre el PRD
 
 Verifica si existe `docs/PRD.md`:
 
@@ -263,9 +285,9 @@ test -f docs/PRD.md && echo "PRD presente" || echo "PRD ausente"
 
 Si no existe, recuerda al usuario:
 
-> No detecte `docs/PRD.md`. Antes de planear el primer milestone, copia tu PRD aprobado al repo siguiendo la seccion 2.3 de la [Guia Prometeo](https://chat.google.com/room/AAQAvHQfwAI?cls=7). Sin PRD, las skills `/plan-milestone` y `/ejecutar-milestone` no tienen contexto del proyecto.
+> No detecte `docs/PRD.md`. Antes de planear el primer milestone, copia tu PRD aprobado al repo siguiendo la seccion 2.3 de la [Guia Prometeo](https://chat.google.com/room/AAQAvHQfwAI?cls=7). Sin PRD, las skills `/p-planear-milestone` y `/p-ejecutar-milestone` no tienen contexto del proyecto.
 
-### 10. Cierre
+### 13. Cierre
 
 Resume al usuario:
 
@@ -282,7 +304,7 @@ Resume al usuario:
 >
 > **Siguientes pasos**
 > 1. Si todavia no copiaste tu PRD aprobado al repo, hazlo ahora en `docs/PRD.md`.
-> 2. Cuando este listo, corre `/plan-milestone` para planear M1.
+> 2. Cuando este listo, corre `/p-planear-milestone` para planear M1.
 >
 > A partir de aqui, todo el flujo es: planear → ejecutar → verificar → promover. **Nunca tocas el editor web.**
 
@@ -298,6 +320,6 @@ Resume al usuario:
 
 - No le pidas al usuario que cree los proyectos manualmente en script.google.com. Si `clasp create` falla, diagnostica el error real.
 - No commitees `environments.json` ni `docs/IDS.md` — ambos estan en `.gitignore`. Si por error aparecen en `git status` rastreados, avisa al usuario.
-- No edites codigo del template durante la skill (Main.js, appsscript.json, etc.). Esos cambios pertenecen a `/ejecutar-milestone`.
+- No edites codigo del template durante la skill (Main.js, appsscript.json, etc.). Esos cambios pertenecen a `/p-ejecutar-milestone`.
 - No saltes el smoke test. Es la unica garantia de que la cadena local → clasp → Apps Script funciona end-to-end.
 - No abras PROD en el smoke test. PROD existe, esta desplegado, pero no se ejecuta nada en el hasta que se promueva un milestone real.
