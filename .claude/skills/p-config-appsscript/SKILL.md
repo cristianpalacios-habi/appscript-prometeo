@@ -21,6 +21,17 @@ Usuario **no tecnico**. Espanol claro. Tu rol es ejecutar las acciones; las preg
 
 **El usuario nunca abre script.google.com a editar.** Si esta skill va bien, los dos proyectos en Apps Script existen pero el usuario nunca tuvo que entrar a crearlos manualmente. El editor web se abre **solo** para el smoke test (ejecutar la funcion `main()` y leer logs).
 
+## Nota sobre dependencias (clasp y supply chain)
+
+Esta skill depende de `@google/clasp` — paquete oficial de Google publicado en npm. Es un eslabon de la cadena de suministro: si `@google/clasp` fuera comprometido (publicacion de version maliciosa, takeover de cuenta del mantenedor en npm), todos los proyectos Prometeo se verian afectados.
+
+Mitigaciones presentes:
+- La instalacion de clasp ocurre en `/p-config-entorno` (paso 4), no en esta skill — esta skill ya asume clasp instalado.
+- En `/p-config-entorno` la instalacion es `npm install -g @google/clasp` apuntando al nombre oficial; no usamos paquetes con nombres similares.
+- Los `environments.json` con IDs reales estan gitignored — un comprometido de clasp no se llevaria automaticamente los IDs via git.
+
+Si en algun momento `@google/clasp` cambia de mantenedor, publica una version con permisos extra, o emite avisos de seguridad, el equipo Prometeo debe actualizar el template (`/p-actualizar-template`) y notificar a los usuarios.
+
 ## Pre-checks (aborta si falla alguno)
 
 Antes de empezar verifica:
@@ -251,7 +262,15 @@ Si el repo no tiene `main` en remoto todavia (caso raro tras clone fresh de temp
 git push -u origin main
 ```
 
-Si falla por permisos del remoto → "No tengo permisos de push en el remoto. Verifica que tienes acceso al repo en GitHub."
+Si falla por permisos del remoto, da pasos concretos al usuario en lugar de un mensaje generico:
+
+> No puedo hacer push a `origin`. Causas probables y soluciones:
+>
+> 1. **No tienes permisos de write en el repo**: ve a `https://github.com/<owner>/<repo>/settings/access`. Si la URL te da 404, no eres ni admin ni maintainer; pide acceso al dueno del repo (en el canal `prometeo-ayuda` o a quien te compartio el repo).
+> 2. **No autorizaste SSO para este token**: ve a `https://github.com/settings/tokens`, encuentra el token de `gh CLI`, click "Configure SSO" → autoriza para `cristianpalacios-habi` (o la org de tu repo).
+> 3. **El `origin` no apunta a tu repo**: corre `git remote -v` para verificar. Si apunta al template plantilla en lugar de tu fork/repo, hay que actualizar el remote.
+>
+> Cuando resuelvas, vuelve y corre `/p-config-appsscript` de nuevo — la skill es idempotente.
 
 ### 10. Inicializar estado del proyecto
 

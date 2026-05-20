@@ -121,6 +121,7 @@ El repo trae skills en `.claude/skills/` que orquestan el flujo. Usalas en el mo
 | Diagnostico | `/p-diagnosticar-error` | Fix en local (sin commit) + `deploy:dev` mismo ID |
 | Cerrar milestone | `/p-nuevo-milestone` | Cierra activo + arranca siguiente |
 | Ajuste pequeno sobre PROD | `/p-arreglo-rapido` | Plan inline + ejecutar + verificar (sin commit, sin promover). Solo aplica sobre milestones ya en PROD. |
+| Auditoria de seguridad | `habi-security-sentinel` | Skill de Victor Pinzon (Ciberseguridad Habi). NO es de Prometeo — es transversal de Habi. Se invoca automaticamente desde `/p-verificar-dev` y `/p-arreglo-rapido` (Fase A) sobre el diff del milestone/fix. Bloquea con verdict `block` si encuentra criticals. |
 | Actualizar el template | `/p-actualizar-template` | Trae actualizaciones de skills + docs + scripts desde el repo plantilla. No toca codigo del usuario (Main.js, PRD, milestones). Backup automatico. |
 
 **Principio clave de git**: los cambios se acumulan **sin commitear** durante todo el milestone (plan → ejecutar → verificar). El usuario los revisa en el panel **Source Control** de Cursor cuando quiera. **El commit unico se hace en `/p-promover-prod`**, con todos los cambios juntos. Esto le da al usuario una vista clara de "que cambia este milestone" antes de promoverlo.

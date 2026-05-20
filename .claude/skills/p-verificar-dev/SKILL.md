@@ -116,10 +116,49 @@ Verifica `appsscript.json` valido:
 node -e "JSON.parse(require('fs').readFileSync('appsscript.json','utf8'))"
 ```
 
-### A.3 Decision
+### A.3 Auditoria de seguridad con habi-security-sentinel
 
-- **Sin problemas**: pasa a Fase B.
-- **Problemas encontrados**: ve a Fase C (Fix loop) con la lista de problemas. Indica al usuario que problemas encontraste y propon el plan del fix.
+Despues de la revision manual, **invoca obligatoriamente la skill `habi-security-sentinel`** (de Victor Pinzon, Ciberseguridad Habi) sobre el diff acumulado del milestone. Esta skill corre 7 familias de checks: secretos hardcodeados, OWASP injection, problemas de auth, XPIA / prompt injection, OWASP LLM, politicas internas de Habi (cedulas, cuentas, prefijos `HABI_`), runtime web.
+
+Como invocarla:
+
+1. Genera el diff completo del milestone:
+
+   ```bash
+   git diff > /tmp/prometeo-milestone-diff.patch
+   ```
+
+2. Invoca la skill `habi-security-sentinel` pasandole el contenido del diff. En este chat, basta con decirle algo como:
+
+   > "Habi-security-sentinel: revisa este diff para seguridad. Es un milestone de un proyecto Prometeo (Apps Script). Reporta verdict, conteos por severidad, y lista de hallazgos."
+   >
+   > <pegar contenido del diff>
+
+3. Lee el reporte que devuelve. La skill ya viene incluida en el repo en `.claude/skills/habi-security-sentinel/` y se carga automaticamente.
+
+**Manejo del verdict**:
+
+- **`pass`** → ningun hallazgo. Sigue a Fase B.
+- **`warn`** (mediums/lows/highs sin critical) → revisa con el usuario:
+  > La auditoria de seguridad encontro hallazgos no criticos:
+  > <lista de hallazgos>
+  >
+  > Opciones:
+  > - Si son falsos positivos (placeholders, ejemplos), confirma y seguimos a Fase B.
+  > - Si son reales, los tratamos como problemas → Fase C (Fix loop).
+- **`block`** (algun `critical`) → **BLOQUEA y NO avances a Fase B**. Trata cada critical como problema obligatorio a resolver en Fase C antes de continuar. Ejemplos tipicos en Prometeo:
+  - API key hardcodeada en codigo (debe ir a PropertiesService).
+  - JWT con `alg: none` (raro en Apps Script pero posible si llama JWT externo).
+  - Validacion de input ausente en endpoint sensible (web app `doGet`/`doPost`).
+  - Cedulas, cuentas Habi o IDs sensibles en `Logger.log()`.
+  - Secretos en logs o comentarios.
+
+Si por algun motivo `habi-security-sentinel` no esta disponible (no deberia pasar — viene con el template), avisa al usuario y deja una nota en el cierre que NO se hizo auditoria automatizada. **No fuerces el flujo sin la auditoria si hay codigo nuevo que toca scopes sensibles** (Gmail, Drive, llamadas a APIs externas con `UrlFetchApp`, manejo de datos personales).
+
+### A.4 Decision
+
+- **Sin problemas en sintaxis ni seguridad**: pasa a Fase B.
+- **Problemas encontrados**: ve a Fase C (Fix loop) con la lista de problemas. Indica al usuario que problemas encontraste y propon el plan del fix. Los hallazgos de `habi-security-sentinel` con verdict `block` son obligatorios; los `warn` son negociables con el usuario.
 
 ## Fase B — Verificacion guiada con el usuario
 
@@ -159,12 +198,31 @@ Espera. Cuando el usuario pegue el log:
   - Errores rojos (`Exception`, `Error`, stack traces)
   - Warnings
   - Tiempos de ejecucion sospechosamente largos (>30s para scripts simples)
-- **Analiza y reporta al usuario:**
+
+- **Validacion de frescura del log** (anti-log-stale): verifica que el log corresponda a una ejecucion reciente comparando el timestamp del log con la hora actual:
+
+  ```bash
+  date +"%Y-%m-%d %H:%M"
+  ```
+
+  Si el log no tiene timestamp visible, **pidelo al usuario antes de analizarlo**:
+
+  > Para verificar que estoy mirando el log correcto: ¿que timestamp aparece arriba del log en el panel "Registro de ejecuciones"? Tambien dime la hora actual en tu computador. Si la diferencia es mayor a 5 minutos, ejecuta la funcion de nuevo y mandame el log fresco.
+
+  Si la diferencia es > 10 minutos, no te fies del log — pide ejecucion fresca. Esto previene que un log viejo de una ejecucion exitosa enmascare un bug actual.
+
+- **Analiza con transparencia**. Reporta al usuario tu razonamiento, no solo el veredicto:
   > Veo el log. Lo que detecto:
-  > - <observacion 1>
+  > - <observacion 1: que linea del log, que valor, por que importa>
   > - <observacion 2>
   >
-  > Veredicto: <pasa ✓ / falla ✗ porque...>
+  > Razonamiento: <por que esto significa pasa o falla, contra que parte del plan/PRD lo estas comparando>
+  >
+  > Veredicto: <pasa ✓ / falla ✗>
+  >
+  > Si ves algo en el log que yo no mencione y crees que es relevante, dimelo — puedo estar pasando por alto algo.
+
+  Este formato da al usuario la oportunidad de cuestionar el analisis (mitiga LLM05: el asistente puede equivocarse interpretando outputs).
 
 #### Item con side-effects observables (Sheet, correo)
 
@@ -325,6 +383,21 @@ Lee `environments.json` y reescribe `docs/IDS.md` (gitignored) con la tabla de I
 - **Logs vacios despues de ejecutar** → el panel "Registro de ejecuciones" puede estar cerrado. Guialo a abrirlo (icono abajo izquierda).
 - **Usuario reporta "no entiendo el log"** → ofrece interpretarlo si lo pega completo. No le pidas que adivine.
 - **Fix loop entra en circulo** (mismo sintoma despues de 3 intentos) → replantear con el usuario.
+
+## Autonomia del usuario
+
+La verificacion guiada es **un acompanamiento, no un automatismo obligatorio**. El usuario tiene autoridad para:
+
+- **Saltar items del checklist** que considere irrelevantes (ej. "este item ya lo probe ayer manualmente, marcalo como pasa sin re-ejecutar").
+- **Detener la skill en cualquier momento** sin tener que justificar.
+- **Cuestionar el veredicto** del asistente. Si el usuario dice "no estoy de acuerdo con tu interpretacion del log", el asistente debe re-leer y explicar mejor, no insistir.
+- **Pedir saltarse la autorizacion OAuth** si encuentra que la skill pide permisos que no esperaba — en ese caso, parar y revisar contra el plan que scopes realmente se necesitan.
+
+Si el usuario decide saltarse algo, registralo en el cierre:
+
+> Verificacion completa. **Items saltados a peticion del usuario**: `<lista>`. Estos items NO fueron validados en esta corrida.
+
+Esto previene que el asistente induzca "consentimiento por agotamiento" al usuario.
 
 ## Que NO hacer
 
