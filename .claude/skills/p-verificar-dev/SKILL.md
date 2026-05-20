@@ -116,10 +116,49 @@ Verifica `appsscript.json` valido:
 node -e "JSON.parse(require('fs').readFileSync('appsscript.json','utf8'))"
 ```
 
-### A.3 Decision
+### A.3 Auditoria de seguridad con habi-security-sentinel
 
-- **Sin problemas**: pasa a Fase B.
-- **Problemas encontrados**: ve a Fase C (Fix loop) con la lista de problemas. Indica al usuario que problemas encontraste y propon el plan del fix.
+Despues de la revision manual, **invoca obligatoriamente la skill `habi-security-sentinel`** (de Victor Pinzon, Ciberseguridad Habi) sobre el diff acumulado del milestone. Esta skill corre 7 familias de checks: secretos hardcodeados, OWASP injection, problemas de auth, XPIA / prompt injection, OWASP LLM, politicas internas de Habi (cedulas, cuentas, prefijos `HABI_`), runtime web.
+
+Como invocarla:
+
+1. Genera el diff completo del milestone:
+
+   ```bash
+   git diff > /tmp/prometeo-milestone-diff.patch
+   ```
+
+2. Invoca la skill `habi-security-sentinel` pasandole el contenido del diff. En este chat, basta con decirle algo como:
+
+   > "Habi-security-sentinel: revisa este diff para seguridad. Es un milestone de un proyecto Prometeo (Apps Script). Reporta verdict, conteos por severidad, y lista de hallazgos."
+   >
+   > <pegar contenido del diff>
+
+3. Lee el reporte que devuelve. La skill ya viene incluida en el repo en `.claude/skills/habi-security-sentinel/` y se carga automaticamente.
+
+**Manejo del verdict**:
+
+- **`pass`** → ningun hallazgo. Sigue a Fase B.
+- **`warn`** (mediums/lows/highs sin critical) → revisa con el usuario:
+  > La auditoria de seguridad encontro hallazgos no criticos:
+  > <lista de hallazgos>
+  >
+  > Opciones:
+  > - Si son falsos positivos (placeholders, ejemplos), confirma y seguimos a Fase B.
+  > - Si son reales, los tratamos como problemas → Fase C (Fix loop).
+- **`block`** (algun `critical`) → **BLOQUEA y NO avances a Fase B**. Trata cada critical como problema obligatorio a resolver en Fase C antes de continuar. Ejemplos tipicos en Prometeo:
+  - API key hardcodeada en codigo (debe ir a PropertiesService).
+  - JWT con `alg: none` (raro en Apps Script pero posible si llama JWT externo).
+  - Validacion de input ausente en endpoint sensible (web app `doGet`/`doPost`).
+  - Cedulas, cuentas Habi o IDs sensibles en `Logger.log()`.
+  - Secretos en logs o comentarios.
+
+Si por algun motivo `habi-security-sentinel` no esta disponible (no deberia pasar — viene con el template), avisa al usuario y deja una nota en el cierre que NO se hizo auditoria automatizada. **No fuerces el flujo sin la auditoria si hay codigo nuevo que toca scopes sensibles** (Gmail, Drive, llamadas a APIs externas con `UrlFetchApp`, manejo de datos personales).
+
+### A.4 Decision
+
+- **Sin problemas en sintaxis ni seguridad**: pasa a Fase B.
+- **Problemas encontrados**: ve a Fase C (Fix loop) con la lista de problemas. Indica al usuario que problemas encontraste y propon el plan del fix. Los hallazgos de `habi-security-sentinel` con verdict `block` son obligatorios; los `warn` son negociables con el usuario.
 
 ## Fase B — Verificacion guiada con el usuario
 

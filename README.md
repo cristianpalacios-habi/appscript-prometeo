@@ -52,6 +52,7 @@ Ver el flujo detallado en [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 | `/p-diagnosticar-error` | Cuando falla | Diagnostica con metodo cientifico, arregla en local sin commitear |
 | `/p-nuevo-milestone` | Al cerrar uno | Cierra el activo y arranca el siguiente del PRD |
 | `/p-arreglo-rapido` | Ajuste pequeno sobre algo ya en PROD | Plan inline + ejecutar + verificar; **no promueve** (te invita a correr `/p-promover-prod`). Versionado decimal: v2.0 → v2.1 |
+| `habi-security-sentinel` | Auditoria de seguridad (transversal Habi) | Skill de Victor Pinzon (Ciberseguridad Habi). Se invoca automaticamente desde `/p-verificar-dev` y `/p-arreglo-rapido` (Fase A) para auditar el diff. Bloquea con verdict `block` si encuentra criticals (secretos hardcodeados, OWASP injection, cedulas en logs, etc.). |
 | `/p-actualizar-template` | Cuando hay nueva version del template | Trae actualizaciones de skills, docs y scripts desde el repo plantilla. No toca tu codigo ni tu PRD/milestones. Backup automatico de archivos managed modificados. |
 
 Todas las skills viven en `.claude/skills/` y se invocan con `/<nombre>` en el chat de Cursor (Agent Mode).

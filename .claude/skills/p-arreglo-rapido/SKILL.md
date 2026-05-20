@@ -169,14 +169,33 @@ npm run deploy:dev
 
 Si falla → diagnostica y muestra al usuario.
 
-### 7. Fase A — Revision estatica (asistente solo)
+### 7. Fase A — Revision estatica + auditoria de seguridad
 
 Mismo procedimiento que `/p-verificar-dev` Fase A, pero acotado al diff de los archivos modificados.
 
-Chequea:
+**A.1 Revision manual** — chequea:
 - ¿API keys o secretos hardcodeados? (no debe haber)
 - ¿Concuerda con el mini-plan?
 - ¿Sintaxis valida (`node --check` por archivo modificado)?
+- ¿`appsscript.json` valido si lo tocaste?
+- ¿No introdujiste accidentalmente algo que saldria de los criterios de eligibilidad de quick-fix?
+
+**A.2 Auditoria de seguridad con `habi-security-sentinel`** — obligatoria igual que en `/p-verificar-dev`:
+
+```bash
+git diff > /tmp/prometeo-fix-diff.patch
+```
+
+Invoca la skill `habi-security-sentinel` pasandole el diff del fix con el mensaje:
+
+> "Habi-security-sentinel: revisa este diff de un quick-fix de Prometeo. Reporta verdict y hallazgos."
+>
+> <pegar contenido del diff>
+
+Manejo del verdict:
+- **`pass`** → sigue a Fase B.
+- **`warn`** → revisa con el usuario; si son falsos positivos, continua; si reales, vuelve al sub-loop de fix.
+- **`block`** (critical) → BLOQUEA. Vuelve al paso 5 para corregir. Si despues de 3 iteraciones sigue bloqueado, redirige a `/p-planear-milestone` (probablemente el cambio es mas grande de lo que parecia).
 - ¿`appsscript.json` valido si lo tocaste?
 - ¿No introdujiste accidentalmente algo que saldria de los criterios de eligibilidad de quick-fix?
 
