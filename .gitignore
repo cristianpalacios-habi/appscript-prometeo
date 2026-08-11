@@ -4,6 +4,7 @@ node_modules/
 # Credenciales y configuracion sensible
 .clasprc.json
 environments.json
+clasp.json
 .env
 .env.*
 !.env.example
